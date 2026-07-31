@@ -16,12 +16,10 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Logger utility
-const logFile = path.join(__dirname, '../logs/app.log');
 function log(message) {
   const timestamp = new Date().toISOString();
   const logMessage = `[${timestamp}] ${message}`;
   console.log(logMessage);
-  fs.appendFileSync(logFile, logMessage + '\n');
 }
 
 // Health check endpoint
