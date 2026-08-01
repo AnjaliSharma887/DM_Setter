@@ -8,7 +8,7 @@ async function testConversation() {
   // Test 1: First message
   console.log('--- TEST 1: First message ---');
   const response1 = await generateResponse(
-    [{ sender: 'user', message: 'Hi, I need help with my career' }],
+    [{ sender: 'user', message: 'Hi, can you help me find job in UK?' }],
     { qualification_stage: 1 }
   );
   console.log('Emma:', response1.response);
@@ -21,7 +21,7 @@ async function testConversation() {
   console.log('--- TEST 2: Country provided ---');
   const response2 = await generateResponse(
     [
-      { sender: 'user', message: 'Hi, I need help with my career' },
+      { sender: 'user', message: 'Hi, can you help me find job in UK?' },
       { sender: 'assistant', message: response1.response },
       { sender: 'user', message: 'I am based in the UK' }
     ],
@@ -48,7 +48,7 @@ async function testConversation() {
   const response4 = await generateResponse(
     [
       { sender: 'user', message: 'Hi' },
-      { sender: 'assistant', message: 'Hey, thank you for your message! I am Emma, an automated assistant for Mingke. To start, could you please let me know which country you are currently based in?' },
+      { sender: 'assistant', message: 'Hey, thank you for your message! I am Emma, an assistant for Mingke. To start, could you please let me know which country you are currently based in?' },
       { sender: 'user', message: 'How much does this cost?' }
     ],
     { qualification_stage: 1 }
