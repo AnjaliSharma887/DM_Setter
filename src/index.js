@@ -1,11 +1,12 @@
+
 // Load environment variables
 require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+const { processMessage } = require('./services/messageProcessor');
+const { initializeDatabase } = require('./config/database');
 
 // Initialize Express app
 const app = express();
@@ -15,58 +16,10 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Logger utility
-function log(message) {
-  const timestamp = new Date().toISOString();
-  const logMessage = `[${timestamp}] ${message}`;
-  console.log(logMessage);
-}
-
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
-  log('Health check received');
+  console.log('Health check received');
   res.json({ status: 'ok', timestamp: new Date() });
-});
-
-// Webhook endpoint for Instagram
-app.post('/webhook/instagram', (req, res) => {
-  try {
-    log(`Webhook received: ${JSON.stringify(req.body)}`);
-
-    // Extract data from Instagram webhook
-    const { entry } = req.body;
-    
-    if (!entry || entry.length === 0) {
-      log('No entry data in webhook');
-      return res.sendStatus(200);
-    }
-
-    // Process each entry
-    entry.forEach(entryItem => {
-      const { messaging } = entryItem;
-      
-      if (messaging) {
-        messaging.forEach(message => {
-          const {
-            sender: { id: senderId },
-            message: { text: messageText },
-            timestamp
-          } = message;
-
-          log(`Message from ${senderId}: "${messageText}"`);
-          
-          // TODO: Add ProcessMessage() logic here in Week 2
-          // For now, just log it
-        });
-      }
-    });
-
-    // Send acknowledgment to Instagram
-    res.sendStatus(200);
-  } catch (error) {
-    log(`Error processing webhook: ${error.message}`);
-    res.status(500).json({ error: error.message });
-  }
 });
 
 // Webhook verification (Instagram requires this)
@@ -75,26 +28,93 @@ app.get('/webhook/instagram', (req, res) => {
   const challenge = req.query['hub.challenge'];
   const mode = req.query['hub.mode'];
 
-  log(`Webhook verification attempt: mode=${mode}, token=${verifyToken}`);
+  console.log(`Webhook verification: mode=${mode}, token=${verifyToken}`);
 
   if (mode === 'subscribe' && verifyToken === process.env.INSTAGRAM_VERIFY_TOKEN) {
-    log('Webhook verified successfully');
+    console.log('Webhook verified successfully');
     res.status(200).send(challenge);
   } else {
-    log('Webhook verification failed');
+    console.log('Webhook verification failed');
     res.sendStatus(403);
   }
 });
 
-// Error handling middleware
+// Webhook receiver (incoming Instagram DMs)
+app.post('/webhook/instagram', async (req, res) => {
+  try {
+    console.log(`Webhook received: ${JSON.stringify(req.body).substring(0, 200)}`);
+
+    // Send 200 immediately (Instagram requires fast response)
+    res.sendStatus(200);
+
+    const { entry } = req.body;
+
+    if (!entry || entry.length === 0) {
+      console.log('No entry data');
+      return;
+    }
+
+    // Process each entry
+    for (const entryItem of entry) {
+      const { messaging } = entryItem;
+
+      if (!messaging) continue;
+
+      for (const event of messaging) {
+        // Skip echo messages (messages sent BY us)
+        if (event.message && event.message.is_echo) {
+          console.log('Skipping echo message');
+          continue;
+        }
+
+        // Skip if no text message
+        if (!event.message || !event.message.text) {
+          console.log('No text in message, skipping');
+          continue;
+        }
+
+        const senderId = event.sender.id;
+        const messageText = event.message.text;
+        const messageId = event.message.mid;
+
+        console.log(`DM from ${senderId}: "${messageText}"`);
+
+        // Process message asynchronously
+        processMessage(senderId, messageText, messageId)
+          .then(() => console.log(`Message processed for ${senderId}`))
+          .catch(err => console.error(`Error processing for ${senderId}:`, err));
+      }
+    }
+
+  } catch (error) {
+    console.error('Webhook error:', error);
+  }
+});
+
+// Error handling
 app.use((err, req, res, next) => {
-  log(`Error: ${err.message}`);
+  console.error('Server error:', err);
   res.status(500).json({ error: err.message });
 });
 
 // Start server
-app.listen(PORT, () => {
-  log(`Server started on port ${PORT}`);
-  log(`Environment: ${process.env.NODE_ENV}`);
-  log(`Ready to receive webhooks at POST /webhook/instagram`);
-});
+async function startServer() {
+  try {
+    // Initialize database
+    await initializeDatabase();
+    console.log('Database initialized');
+
+    // Start listening
+    app.listen(PORT, () => {
+      console.log(`Server started on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV}`);
+      console.log(`Webhook: POST /webhook/instagram`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
+
