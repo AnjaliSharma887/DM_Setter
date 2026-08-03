@@ -2,15 +2,10 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-const logFile = path.join(__dirname, '../../logs/app.log');
-
 function log(message) {
   const timestamp = new Date().toISOString();
-  const logMessage = `[${timestamp}] ${message}`;
-  console.log(logMessage);
-  fs.appendFileSync(logFile, logMessage + '\n');
+  console.log(`[${timestamp}] ${message}`);
 }
-
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
