@@ -31,6 +31,8 @@ app.get('/webhook/instagram', (req, res) => {
   console.log(`Webhook verification: mode=${mode}, token=${verifyToken}`);
 
   if (mode === 'subscribe' && verifyToken === process.env.INSTAGRAM_VERIFY_TOKEN) {
+    console.log('Expected token:', process.env.INSTAGRAM_VERIFY_TOKEN);
+    console.log('Received token:', verifyToken);
     console.log('Webhook verified successfully');
     res.status(200).send(challenge);
   } else {
