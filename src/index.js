@@ -5,7 +5,7 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { processMessage } = require('./services/messageProcessor');
+const { processMessage, queueMessage } = require('./services/messageProcessor');
 const { initializeDatabase } = require('./config/database');
 
 // Initialize Express app
@@ -82,9 +82,8 @@ app.post('/webhook/instagram', async (req, res) => {
         console.log(`DM from ${senderId}: "${messageText}"`);
 
         // Process message asynchronously
-        processMessage(senderId, messageText, messageId)
-          .then(() => console.log(`Message processed for ${senderId}`))
-          .catch(err => console.error(`Error processing for ${senderId}:`, err));
+        queueMessage(senderId, messageText, messageId);
+        console.log(`Message queued for ${senderId}, waiting 10s for more...`);
       }
     }
 

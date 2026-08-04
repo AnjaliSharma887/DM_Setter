@@ -3,6 +3,59 @@ const Conversation = require('../models/Conversation');
 const { generateResponse } = require('./claude');
 const { sendMessage } = require('./instagram');
 
+// ============ MESSAGE DEBOUNCING ============
+// Store pending messages per user
+const pendingMessages = {};
+const DEBOUNCE_TIME = 10000; // 10 seconds
+
+/**
+ * Queue message and wait for more messages before processing
+ * If no new message arrives in 10 seconds, process all queued messages
+ */
+function queueMessage(senderId, messageText, messageId) {
+  // If user already has pending messages, add to queue
+  if (pendingMessages[senderId]) {
+    pendingMessages[senderId].messages.push(messageText);
+    pendingMessages[senderId].messageIds.push(messageId);
+    
+    console.log(`[DEBOUNCE] Adding to queue for ${senderId}. Total: ${pendingMessages[senderId].messages.length} messages`);
+    
+    // Reset the timer - keep waiting for more messages
+    clearTimeout(pendingMessages[senderId].timer);
+  } else {
+    // First message from this user - start queue
+    pendingMessages[senderId] = {
+      messages: [messageText],
+      messageIds: [messageId],
+      firstMessageTime: Date.now()
+    };
+    
+    console.log(`[DEBOUNCE] Started queue for ${senderId}`);
+  }
+
+  // Set timer: process after 10 seconds of silence
+  pendingMessages[senderId].timer = setTimeout(async () => {
+    // Combine all messages into one
+    const combinedMessage = pendingMessages[senderId].messages.join('\n');
+    const messageIds = pendingMessages[senderId].messageIds;
+    const totalMessages = pendingMessages[senderId].messages.length;
+    
+    // Clear the pending queue for this user
+    delete pendingMessages[senderId];
+    
+    console.log(`[DEBOUNCE] Processing ${totalMessages} messages from ${senderId} after 10s wait`);
+    console.log(`[DEBOUNCE] Combined text: "${combinedMessage}"`);
+    
+    // Now process the combined message
+    try {
+      await processMessage(senderId, combinedMessage, messageIds[0]);
+    } catch (error) {
+      console.error(`[DEBOUNCE] Error processing combined messages:`, error);
+    }
+  }, DEBOUNCE_TIME);
+}
+
+// ============ ORIGINAL PROCESS MESSAGE ============
 async function processMessage(senderId, messageText, messageId) {
   try {
     console.log(`Processing message from ${senderId}: "${messageText}"`);
@@ -18,17 +71,6 @@ async function processMessage(senderId, messageText, messageId) {
     // Step 3: Get conversation history (last 10 messages)
     const history = await Conversation.getHistory(senderId, 10);
     console.log(`Retrieved ${history.length} messages from history`);
-
-    // Step 4: Check for duplicate message
-    // If last assistant message was sent less than 5 seconds ago, skip
-    const lastAssistantMsg = history.filter(m => m.sender === 'assistant').pop();
-    if (lastAssistantMsg) {
-      const timeDiff = Date.now() - new Date(lastAssistantMsg.timestamp).getTime();
-      if (timeDiff < 5000) {
-        console.log(`Duplicate detected (${timeDiff}ms since last response). Skipping.`);
-        return;
-      }
-    }
 
     // Step 5: Call Claude for intelligent response
     const claudeResponse = await generateResponse(history, user);
@@ -78,4 +120,4 @@ async function processMessage(senderId, messageText, messageId) {
   }
 }
 
-module.exports = { processMessage };
+module.exports = { processMessage, queueMessage };
