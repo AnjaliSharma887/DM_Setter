@@ -97,8 +97,30 @@ async function processMessage(senderId, messageText, messageId) {
     await Conversation.saveMessage(senderId, 'assistant', claudeResponse.response);
     console.log(`Saved assistant response to database`);
 
-    // Step 8: Send response via Instagram API
-    await sendMessage(senderId, claudeResponse.response);
+    // Step 7: Send response via Instagram API
+    // Step 7: Split and send response with delays
+    const messages = claudeResponse.response.split('|||').map(m => m.trim()).filter(m => m.length > 0);
+
+    console.log(`[SPLIT] Sending ${messages.length} messages with delays`);
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+  
+      // Send message
+      await sendMessage(senderId, msg);
+      console.log(`[SPLIT] Sent message ${i + 1}/${messages.length}: "${msg.substring(0, 40)}..."`);
+  
+      // Save each part to database
+      if (i > 0) {
+        await Conversation.saveMessage(senderId, 'assistant', msg);
+      }
+  
+      // Wait 3 seconds before next message (except last one)
+      if (i < messages.length - 1) {
+        console.log(`[SPLIT] Waiting 3s before next message...`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
     console.log(`Response sent to Instagram: "${claudeResponse.response.substring(0, 50)}..."`);
 
     // Step 9: Update last message timestamp
