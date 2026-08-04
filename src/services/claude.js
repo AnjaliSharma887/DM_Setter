@@ -248,17 +248,19 @@ async function generateResponse(conversationHistory, userProfile) {
 
     // Add user profile context to the latest message
     if (messages.length > 0 && userProfile) {
+      // Define profileContext FIRST
+      const profileContext = `\n\n[USER PROFILE FROM DATABASE]\nCountry: ${userProfile.country || 'unknown'}\nRoles: ${userProfile.desired_roles || 'unknown'}\nExperience: ${userProfile.experience_years || 'unknown'}\nApplication Status: ${userProfile.application_status || 'unknown'}\nPain Points: ${userProfile.pain_points || 'unknown'}\nCurrent Stage: ${userProfile.qualification_stage || 1}\nQualified: ${userProfile.qualified || 'unknown'}`;
+
+      // Find the last user message
       const lastUserIndex = [...messages]
         .map((m, i) => ({ ...m, i }))
         .reverse()
         .find(m => m.role === "user")?.i;
 
+      // Append profile context to the last user message
       if (lastUserIndex !== undefined) {
         messages[lastUserIndex].content += profileContext;
       }
-      const profileContext = `\n\n[USER PROFILE FROM DATABASE]\nCountry: ${userProfile.country || 'unknown'}\nRoles: ${userProfile.desired_roles || 'unknown'}\nExperience: ${userProfile.experience_years || 'unknown'}\nApplication Status: ${userProfile.application_status || 'unknown'}\nPain Points: ${userProfile.pain_points || 'unknown'}\nCurrent Stage: ${userProfile.qualification_stage || 1}\nQualified: ${userProfile.qualified || 'unknown'}`;
-      
-      messages[lastUserIndex].content += profileContext;
     }
 
     // Ensure messages start with user role
