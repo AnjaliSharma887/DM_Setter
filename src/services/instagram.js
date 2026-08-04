@@ -7,7 +7,7 @@ async function sendMessage(recipientId, messageText) {
     const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
 
     const response = await axios.post(
-      `https://graph.facebook.com/v26.0/${pageId}/messages`,
+      `https://graph.instagram.com/v26.0/${pageId}/messages`,
       {
         recipient: { id: recipientId },
         messaging_type: 'RESPONSE',
