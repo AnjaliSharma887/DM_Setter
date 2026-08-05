@@ -1,8 +1,8 @@
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
-const ClaudeResponseLog = require('../models/ClaudeResponseLog');
 const { generateResponse } = require('./claude');
 const { sendMessage } = require('./instagram');
+
 
 // ============ MESSAGE DEBOUNCING ============
 // Store pending messages per user
