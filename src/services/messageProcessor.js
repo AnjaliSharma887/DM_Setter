@@ -129,6 +129,12 @@ async function processMessage(senderId, messageText, messageId) {
 
     console.log(`[SPLIT] Sending ${messages.length} messages with delays`);
 
+    // ← ADD THESE 3 LINES HERE (before the loop)
+    const lastMessage = await Conversation.getLastMessage(senderId);
+    // Use Claude's NEW value, but if NULL, use last known value
+    const lastStage = claudeResponse.qualification_stage || lastMessage?.qualification_stage;
+    const lastAction = claudeResponse.next_action || lastMessage?.next_action;
+
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
   
@@ -140,10 +146,10 @@ async function processMessage(senderId, messageText, messageId) {
       await Conversation.saveMessage(
         senderId, 
         'assistant', 
-        msg,  // Individual message part
+        msg,
         messageId,
-        claudeResponse.next_action,  // ← Pass this
-        claudeResponse.qualification_stage  // ← Pass this
+        lastAction,  // ← Use last known value if NULL
+        lastStage    // ← Use last known value if NULL
       );
   
       // Wait 3 seconds before next message (except last one)
