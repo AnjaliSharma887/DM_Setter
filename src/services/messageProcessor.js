@@ -82,7 +82,7 @@ async function processMessage(senderId, messageText, messageId) {
     // #endregion
 
     // Step 5b: Persist full Claude JSON for monitoring
-    // console.log(`Saved Claude output to claude_response_log (log_id: ${savedLog.log_id})`);
+    console.log(`Saved Claude output to claude_response_log (log_id: ${savedLog.log_id})`);
 
     // #region agent log
     fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:claudeLogSaved',message:'Full Claude JSON saved to claude_response_log',data:{log_id:savedLog.log_id,next_action:savedLog.next_action,qualification_stage:savedLog.qualification_stage,hasRawResponse:!!savedLog.raw_response},timestamp:Date.now(),hypothesisId:'H1-H2',runId:'post-fix'})}).catch(()=>{});
