@@ -119,12 +119,7 @@ async function processMessage(senderId, messageText, messageId) {
       // #endregion
     }
 
-    // Step 7: Save Emma's response to database
-    await Conversation.saveMessage(senderId, 'assistant', claudeResponse.response);
-    console.log(`Saved assistant response to database`);
-
-    // Step 7: Send response via Instagram API
-    // Step 7: Split and send response with delays
+    // Step 7: Split and send response with delays & Send response via Instagram API
     const messages = claudeResponse.response.split('|||').map(m => m.trim()).filter(m => m.length > 0);
 
     console.log(`[SPLIT] Sending ${messages.length} messages with delays`);
