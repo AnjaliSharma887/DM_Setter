@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
+const ClaudeResponseLog = require('../models/ClaudeResponseLog');
 const { generateResponse } = require('./claude');
 const { sendMessage } = require('./instagram');
 
@@ -77,7 +78,15 @@ async function processMessage(senderId, messageText, messageId) {
     console.log(`Claude response: ${JSON.stringify(claudeResponse)}`);
 
     // #region agent log
-    fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:claudeResponse',message:'Claude JSON received',data:{hasExtractedData:!!claudeResponse.extracted_data,next_action:claudeResponse.next_action||null,qualification_stage:claudeResponse.qualification_stage||null,extracted_data:claudeResponse.extracted_data||null,responseLength:(claudeResponse.response||'').length},timestamp:Date.now(),hypothesisId:'H1-H2'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:claudeResponse',message:'Claude JSON received',data:{hasExtractedData:!!claudeResponse.extracted_data,next_action:claudeResponse.next_action||null,qualification_stage:claudeResponse.qualification_stage||null,extracted_data:claudeResponse.extracted_data||null,responseLength:(claudeResponse.response||'').length},timestamp:Date.now(),hypothesisId:'H1-H2',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
+
+    // Step 5b: Persist full Claude JSON for monitoring
+    const savedLog = await ClaudeResponseLog.save(senderId, claudeResponse);
+    console.log(`Saved Claude output to claude_response_log (log_id: ${savedLog.log_id})`);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:claudeLogSaved',message:'Full Claude JSON saved to claude_response_log',data:{log_id:savedLog.log_id,next_action:savedLog.next_action,qualification_stage:savedLog.qualification_stage,hasRawResponse:!!savedLog.raw_response},timestamp:Date.now(),hypothesisId:'H1-H2',runId:'post-fix'})}).catch(()=>{});
     // #endregion
 
     // Step 6: Extract and save user data from Claude's response
@@ -130,10 +139,15 @@ async function processMessage(senderId, messageText, messageId) {
       await sendMessage(senderId, msg);
       console.log(`[SPLIT] Sent message ${i + 1}/${messages.length}: "${msg.substring(0, 40)}..."`);
   
-      // Save each part to database
-      if (i > 0) {
-        await Conversation.saveMessage(senderId, 'assistant', msg);
-      }
+      // Save each message WITH next_action and stage
+      await Conversation.saveMessage(
+        senderId, 
+        'assistant', 
+        msg,  // Individual message part
+        messageId,
+        claudeResponse.next_action,  // ← Pass this
+        claudeResponse.qualification_stage  // ← Pass this
+      );
   
       // Wait 3 seconds before next message (except last one)
       if (i < messages.length - 1) {

@@ -32,6 +32,10 @@ CREATE TABLE conversations (
   processed BOOLEAN DEFAULT FALSE
 );
 
+ALTER TABLE conversations ADD COLUMN next_action VARCHAR(50);
+ALTER TABLE conversations ADD COLUMN qualification_stage INT;
+
+
 -- Qualifications log
 CREATE TABLE qualifications_log (
   log_id SERIAL PRIMARY KEY,

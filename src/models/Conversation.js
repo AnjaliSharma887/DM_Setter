@@ -1,18 +1,17 @@
 const db = require('../config/database');
 
 class Conversation {
-  static async saveMessage(userId, sender, message, metaMessageId = null) {
+  static async saveMessage(userId, sender, message, messageId, nextAction = null, stage = null) {
     try {
       const result = await db.query(
-        `INSERT INTO conversations (user_id, sender, message, message_type, meta_message_id, timestamp)
-         VALUES ($1, $2, $3, $4, $5, NOW())
+        `INSERT INTO conversations (user_id, sender, message, timestamp, meta_message_id, next_action, qualification_stage)
+         VALUES ($1, $2, $3, NOW(), $4, $5, $6)
          RETURNING *`,
-        [userId, sender, message, 'text', metaMessageId]
+         [userId, sender, message, messageId, nextAction, stage]
       );
-      
       return result.rows[0];
     } catch (error) {
-      console.error('Error in Conversation.saveMessage:', error);
+      console.error('Conversation.saveMessage error:', error);
       throw error;
     }
   }
