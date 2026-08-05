@@ -19,6 +19,7 @@ CREATE TABLE users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   last_message_at TIMESTAMP
 );
+ALTER TABLE users ADD COLUMN latest_next_action VARCHAR(50);
 
 -- Conversations table
 CREATE TABLE conversations (

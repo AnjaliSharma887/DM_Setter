@@ -73,6 +73,24 @@ class User {
     }
   }
 
+  static async updateLatestAction(userId, nextAction, stage) {
+  try {
+    const result = await db.query(
+      `UPDATE users 
+       SET latest_next_action = $1, 
+           qualification_stage = $2,
+           updated_at = NOW() 
+       WHERE user_id = $3 
+       RETURNING *`,
+      [nextAction, stage, userId]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('User.updateLatestAction error:', error);
+    throw error;
+  }
+}
+
   static async getById(userId) {
     try {
       const result = await db.query('SELECT * FROM users WHERE user_id = $1', [userId]);

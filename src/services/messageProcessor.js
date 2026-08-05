@@ -77,6 +77,15 @@ async function processMessage(senderId, messageText, messageId) {
     const claudeResponse = await generateResponse(history, user);
     console.log(`Claude response: ${JSON.stringify(claudeResponse)}`);
 
+    // Step 6: Update latest action in users table ← ADD THIS WHOLE BLOCK
+    await User.updateLatestAction(
+      senderId,
+      claudeResponse.next_action,
+      claudeResponse.qualification_stage
+    );
+    console.log(`Updated user latest_action to: ${claudeResponse.next_action}`);
+    // END STEP 6
+
     // Step 6: Extract and save user data from Claude's response
     let updatedUser = null;
     if (claudeResponse.extracted_data) {
