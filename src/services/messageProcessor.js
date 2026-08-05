@@ -76,21 +76,41 @@ async function processMessage(senderId, messageText, messageId) {
     const claudeResponse = await generateResponse(history, user);
     console.log(`Claude response: ${JSON.stringify(claudeResponse)}`);
 
+    // #region agent log
+    fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:claudeResponse',message:'Claude JSON received',data:{hasExtractedData:!!claudeResponse.extracted_data,next_action:claudeResponse.next_action||null,qualification_stage:claudeResponse.qualification_stage||null,extracted_data:claudeResponse.extracted_data||null,responseLength:(claudeResponse.response||'').length},timestamp:Date.now(),hypothesisId:'H1-H2'})}).catch(()=>{});
+    // #endregion
+
     // Step 6: Extract and save user data from Claude's response
+    let updatedUser = null;
     if (claudeResponse.extracted_data) {
       const data = claudeResponse.extracted_data;
-      await User.updateStage(senderId, claudeResponse.qualification_stage || user.qualification_stage, {
+      const stageToSave = claudeResponse.qualification_stage || user.qualification_stage;
+      const fieldsToSave = {
         country: data.country,
         roles: data.roles,
         experience: data.experience_years ? parseInt(data.experience_years) : null,
         applicationStatus: data.application_status,
         painPoints: data.pain_points
-      });
+      };
+
+      // #region agent log
+      fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:beforeDbSave',message:'Fields about to persist to users table',data:{stageToSave,fieldsToSave,qualifiedWillUpdate:data.qualified!==null&&data.qualified!==undefined,qualifiedValue:data.qualified??null,next_action_NOT_SAVED:claudeResponse.next_action||null,userBefore:{stage:user.qualification_stage,country:user.country,qualified:user.qualified}},timestamp:Date.now(),hypothesisId:'H3-H5'})}).catch(()=>{});
+      // #endregion
+
+      updatedUser = await User.updateStage(senderId, stageToSave, fieldsToSave);
 
       // Update qualification status
       if (data.qualified !== null && data.qualified !== undefined) {
-        await User.updateQualification(senderId, data.qualified);
+        updatedUser = await User.updateQualification(senderId, data.qualified);
       }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:afterDbSave',message:'User row after DB write',data:{userAfter:{stage:updatedUser?.qualification_stage,country:updatedUser?.country,desired_roles:updatedUser?.desired_roles,experience_years:updatedUser?.experience_years,application_status:updatedUser?.application_status,pain_points:updatedUser?.pain_points,qualified:updatedUser?.qualified}},timestamp:Date.now(),hypothesisId:'H3-H5'})}).catch(()=>{});
+      // #endregion
+    } else {
+      // #region agent log
+      fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:noExtractedData',message:'No extracted_data - users table NOT updated',data:{qualification_stage:claudeResponse.qualification_stage||null,next_action:claudeResponse.next_action||null},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
     }
 
     // Step 7: Save Emma's response to database

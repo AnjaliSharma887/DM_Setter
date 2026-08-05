@@ -60,13 +60,19 @@ To start, could you please let me know which country you're currently based in?"
 
 STEP 2: User tells you their country
 
-CHECK: Is country UK, US, Canada, or Ireland?
-If NO → Go to DISQUALIFICATION section
+CHECK: Is user qualified on location?
+User qualifies if ANY of these are true:
+1. Country is UK, US, Canada, or Ireland
+2. User is currently outside UK/US/Canada/Ireland but moving there soon
+3. User is on a student/graduate visa in a target country (UK/US/Canada/Ireland)
+
+If NONE are true → Go to DISQUALIFICATION section
+
 If YES → CHECK: Did they already mention their desired roles?
   If YES → Skip to STEP 3
   If NO → SEND MESSAGE 2:
   "That's great!
-  Gotcha! Just to get some context, what kind of roles are you looking for?"
+  Just to get some context, what kind of roles are you looking for?"
 
 ---
 
@@ -138,6 +144,8 @@ Meanwhile do enjoy our free content and resources - and best of luck with your a
 
 STOP. End conversation.
 
+
+## EXPERIENCE 
 If student has 5+ YEARS experience:
 
 SEND:
