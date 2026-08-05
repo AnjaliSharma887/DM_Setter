@@ -16,6 +16,21 @@ class Conversation {
     }
   }
 
+  static async getLastMessage(userId) {
+  try {
+    const result = await db.query(
+      `SELECT qualification_stage, next_action FROM conversations 
+       WHERE user_id = $1 
+       ORDER BY timestamp DESC LIMIT 1`,
+      [userId]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('getLastMessage error:', error);
+    return null;
+  }
+}
+
   static async getHistory(userId, limit = 10) {
     try {
       const result = await db.query(
