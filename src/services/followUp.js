@@ -3,7 +3,6 @@ const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 const { generateResponse } = require('./claude');
 const { sendMessage } = require('./instagram');
-const { sendEscalationAlert } = require('./alerting');
 const { sendEscalationAlert, sendFollowUpNotification } = require('./alerting');
 
 /**
