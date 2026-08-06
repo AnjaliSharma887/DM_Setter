@@ -8,6 +8,7 @@ const cors = require('cors');
 const { processMessage, queueMessage } = require('./services/messageProcessor');
 const { initializeDatabase } = require('./config/database');
 const { sendEscalationAlert } = require('./services/alerting');
+const { runFollowUpJob } = require('./services/followUp');
 
 // Initialize Express app
 const app = express();
@@ -113,6 +114,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
+// Start server
 async function startServer() {
   try {
     // Initialize database
@@ -124,6 +126,23 @@ async function startServer() {
       console.log(`Server started on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV}`);
       console.log(`Webhook: POST /webhook/instagram`);
+      
+      // ← MOVED INSIDE app.listen callback
+      // Start follow-up background job (runs every 15 minutes)
+      const FOLLOWUP_INTERVAL = 15 * 60 * 1000;
+      
+      setInterval(async () => {
+        console.log('[SCHEDULER] Running follow-up job...');
+        await runFollowUpJob();
+      }, FOLLOWUP_INTERVAL);
+
+      // Run once on startup after 30 seconds
+      setTimeout(async () => {
+        console.log('[SCHEDULER] Initial follow-up job on startup');
+        await runFollowUpJob();
+      }, 30000);
+
+      console.log(`[SCHEDULER] Follow-up job scheduled to run every 15 minutes`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -132,4 +151,3 @@ async function startServer() {
 }
 
 startServer();
-

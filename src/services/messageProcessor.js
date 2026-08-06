@@ -3,6 +3,7 @@ const Conversation = require('../models/Conversation');
 const { generateResponse } = require('./claude');
 const { sendMessage } = require('./instagram');
 const { sendEscalationAlert } = require('./alerting');
+const db = require('../config/database');
 
 // ============ MESSAGE DEBOUNCING ============
 // Store pending messages per user
@@ -76,6 +77,14 @@ async function processMessage(senderId, messageText, messageId) {
     // Step 2: Save incoming message to database
     await Conversation.saveMessage(senderId, 'user', messageText, messageId);
     console.log(`Saved user message to database`);
+
+    // ← ADD THIS: Reset follow-up when user replies
+    await db.query(`
+      UPDATE users 
+      SET follow_up_count = 0, follow_up_sent_at = NULL 
+      WHERE user_id = $1
+    `, [senderId]);
+    console.log(`Reset follow-up count for ${senderId}`);
 
     // Step 3: Get conversation history (last 10 messages)
     const history = await Conversation.getHistory(senderId, 10);
