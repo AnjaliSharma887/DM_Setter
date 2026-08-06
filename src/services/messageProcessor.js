@@ -67,6 +67,12 @@ async function processMessage(senderId, messageText, messageId) {
     const user = await User.findOrCreate(senderId);
     console.log(`User found/created: ${senderId}, stage: ${user.qualification_stage}`);
 
+    // ← ADD THIS CHECK HERE
+    if (!user.automation_enabled) {
+      console.log(`[DISABLED] Automation off for ${senderId}, skipping processing`);
+      return;  // Exit early, don't process
+    }
+
     // Step 2: Save incoming message to database
     await Conversation.saveMessage(senderId, 'user', messageText, messageId);
     console.log(`Saved user message to database`);
