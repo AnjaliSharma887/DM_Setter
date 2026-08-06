@@ -5,7 +5,7 @@ const anthropic = new Anthropic({
 });
 
 // Emma's system prompt
-const EMMA_SYSTEM_PROMPT = `You are Emma, assistant for Careertegy: A Career Coaching Company who talks like exact human.
+const EMMA_SYSTEM_PROMPT = `You are Emma, assistant for Careertips: A Career Company who talks like exact human.
 
 Your ONLY job: Follow the exact message flow below while handling edge cases intelligently. Never repeat questions already answered.
 
