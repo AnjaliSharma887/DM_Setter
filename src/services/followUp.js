@@ -70,6 +70,7 @@ async function generateFollowUpMessage(user) {
 async function sendFollowUp(user) {
   try {
     console.log(`[FOLLOWUP] Processing ${user.user_id}, stage: ${user.qualification_stage}`);
+    return true;  // ← Add this
 
     // ← ADD THIS: Get last 3 messages BEFORE generating follow-up
     const history = await Conversation.getHistory(user.user_id, 3);
@@ -79,7 +80,7 @@ async function sendFollowUp(user) {
     
     if (!followUpMessage) {
       console.log(`[FOLLOWUP] No message generated for ${user.user_id}`);
-      return;
+      return false;  // ← Return false if no message
     }
 
     // Split messages if Claude used |||
@@ -123,6 +124,7 @@ async function sendFollowUp(user) {
     await sendFollowUpNotification(user, followUpMessage, history);
 
     console.log(`[FOLLOWUP] ✅ Follow-up complete for ${user.user_id}`);
+    return true;  // ← ADD HERE (end of try block, after log)
 
   } catch (error) {
     console.error(`[FOLLOWUP] Error for ${user.user_id}:`, error);
@@ -133,9 +135,10 @@ async function sendFollowUp(user) {
       `Follow-up failed for user: ${user.user_id}`,
       null
     );
+
+    return false;  // ← ADD HERE (end of catch block)
   }
 }
-
 /**
  * Main background job - runs every 15 minutes
  */
@@ -151,15 +154,18 @@ async function runFollowUpJob() {
       return;
     }
 
+    let sentCount = 0;  // ← Track actual sends
+
     // Process each user (space out sends to avoid rate limits)
     for (const user of eligibleUsers) {
-      await sendFollowUp(user);
+      const result = await sendFollowUp(user);
+      if (result) sentCount++;  // ← Increment only on success
       
       // Wait 5 seconds between users
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
 
-    console.log(`[FOLLOWUP JOB] ✅ Completed. Sent ${eligibleUsers.length} follow-ups`);
+    console.log(`[FOLLOWUP JOB] ✅ Completed. Sent ${sentCount}/${eligibleUsers.length} follow-ups`);
 
   } catch (error) {
     console.error('[FOLLOWUP JOB] Job error:', error);
