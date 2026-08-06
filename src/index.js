@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const { processMessage, queueMessage } = require('./services/messageProcessor');
 const { initializeDatabase } = require('./config/database');
+const { sendEscalationAlert } = require('./services/alerting');
 
 // Initialize Express app
 const app = express();
@@ -63,27 +64,39 @@ app.post('/webhook/instagram', async (req, res) => {
       if (!messaging) continue;
 
       for (const event of messaging) {
-        // Skip echo messages (messages sent BY us)
-        if (event.message && event.message.is_echo) {
-          console.log('Skipping echo message');
-          continue;
+        // ← ADD TRY-CATCH HERE
+        try {
+          // Skip echo messages (messages sent BY us)
+          if (event.message && event.message.is_echo) {
+            console.log('Skipping echo message');
+            continue;
+          }
+
+          // Skip if no text message
+          if (!event.message || !event.message.text) {
+            console.log('No text in message, skipping');
+            continue;
+          }
+
+          const senderId = event.sender.id;
+          const messageText = event.message.text;
+          const messageId = event.message.mid;
+
+          console.log(`DM from ${senderId}: "${messageText}"`);
+
+          // Process message asynchronously
+          queueMessage(senderId, messageText, messageId);
+          console.log(`Message queued for ${senderId}, waiting 10s for more...`);
+
+        } catch (eventError) {
+          // ← SEND ESCALATION ALERT
+          console.error('Error processing event:', eventError);
+          
+          await sendEscalationAlert(
+            eventError,
+            `Webhook event error - User: ${event.sender?.id}, Message: "${event.message?.text?.substring(0, 50)}..."`
+          );
         }
-
-        // Skip if no text message
-        if (!event.message || !event.message.text) {
-          console.log('No text in message, skipping');
-          continue;
-        }
-
-        const senderId = event.sender.id;
-        const messageText = event.message.text;
-        const messageId = event.message.mid;
-
-        console.log(`DM from ${senderId}: "${messageText}"`);
-
-        // Process message asynchronously
-        queueMessage(senderId, messageText, messageId);
-        console.log(`Message queued for ${senderId}, waiting 10s for more...`);
       }
     }
 
@@ -91,6 +104,7 @@ app.post('/webhook/instagram', async (req, res) => {
     console.error('Webhook error:', error);
   }
 });
+
 
 // Error handling
 app.use((err, req, res, next) => {

@@ -2,7 +2,7 @@ const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 const { generateResponse } = require('./claude');
 const { sendMessage } = require('./instagram');
-
+const { sendEscalationAlert } = require('./alerting');
 
 // ============ MESSAGE DEBOUNCING ============
 // Store pending messages per user
@@ -58,6 +58,8 @@ function queueMessage(senderId, messageText, messageId) {
 
 // ============ ORIGINAL PROCESS MESSAGE ============
 async function processMessage(senderId, messageText, messageId) {
+  let claudeResponse = null;  // ← Track Claude's response for escalation
+
   try {
     console.log(`Processing message from ${senderId}: "${messageText}"`);
 
@@ -74,20 +76,18 @@ async function processMessage(senderId, messageText, messageId) {
     console.log(`Retrieved ${history.length} messages from history`);
 
     // Step 5: Call Claude for intelligent response
-    const claudeResponse = await generateResponse(history, user);
+    claudeResponse = await generateResponse(history, user);
     console.log(`Claude response: ${JSON.stringify(claudeResponse)}`);
 
-    // Step 6: Update latest action in users table ← ADD THIS WHOLE BLOCK
+    // Step 6: Update latest action in users table
     await User.updateLatestAction(
       senderId,
       claudeResponse.next_action,
       claudeResponse.qualification_stage
     );
     console.log(`Updated user latest_action to: ${claudeResponse.next_action}`);
-    // END STEP 6
 
-    // Step 6: Extract and save user data from Claude's response
-    let updatedUser = null;
+    // Step 6b: Extract and save user data from Claude's response
     if (claudeResponse.extracted_data) {
       const data = claudeResponse.extracted_data;
       const stageToSave = claudeResponse.qualification_stage || user.qualification_stage;
@@ -99,55 +99,36 @@ async function processMessage(senderId, messageText, messageId) {
         painPoints: data.pain_points
       };
 
-      // #region agent log
-      fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:beforeDbSave',message:'Fields about to persist to users table',data:{stageToSave,fieldsToSave,qualifiedWillUpdate:data.qualified!==null&&data.qualified!==undefined,qualifiedValue:data.qualified??null,next_action_NOT_SAVED:claudeResponse.next_action||null,userBefore:{stage:user.qualification_stage,country:user.country,qualified:user.qualified}},timestamp:Date.now(),hypothesisId:'H3-H5'})}).catch(()=>{});
-      // #endregion
+      await User.updateStage(senderId, stageToSave, fieldsToSave);
 
-      updatedUser = await User.updateStage(senderId, stageToSave, fieldsToSave);
-
-      // Update qualification status
       if (data.qualified !== null && data.qualified !== undefined) {
-        updatedUser = await User.updateQualification(senderId, data.qualified);
+        await User.updateQualification(senderId, data.qualified);
       }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:afterDbSave',message:'User row after DB write',data:{userAfter:{stage:updatedUser?.qualification_stage,country:updatedUser?.country,desired_roles:updatedUser?.desired_roles,experience_years:updatedUser?.experience_years,application_status:updatedUser?.application_status,pain_points:updatedUser?.pain_points,qualified:updatedUser?.qualified}},timestamp:Date.now(),hypothesisId:'H3-H5'})}).catch(()=>{});
-      // #endregion
-    } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7552/ingest/306b3583-99eb-4cb6-bd0c-3a790ee371e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f6cbd9'},body:JSON.stringify({sessionId:'f6cbd9',location:'messageProcessor.js:noExtractedData',message:'No extracted_data - users table NOT updated',data:{qualification_stage:claudeResponse.qualification_stage||null,next_action:claudeResponse.next_action||null},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
     }
 
-    // Step 7: Split and send response with delays & Send response via Instagram API
+    // Step 7: Split and send response with delays
     const messages = claudeResponse.response.split('|||').map(m => m.trim()).filter(m => m.length > 0);
-
     console.log(`[SPLIT] Sending ${messages.length} messages with delays`);
 
-    // ← ADD THESE 3 LINES HERE (before the loop)
     const lastMessage = await Conversation.getLastMessage(senderId);
-    // Use Claude's NEW value, but if NULL, use last known value
     const lastStage = claudeResponse.qualification_stage || lastMessage?.qualification_stage;
     const lastAction = claudeResponse.next_action || lastMessage?.next_action;
 
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
-  
-      // Send message
+
       await sendMessage(senderId, msg);
       console.log(`[SPLIT] Sent message ${i + 1}/${messages.length}: "${msg.substring(0, 40)}..."`);
-  
-      // Save each message WITH next_action and stage
+
       await Conversation.saveMessage(
-        senderId, 
-        'assistant', 
+        senderId,
+        'assistant',
         msg,
         messageId,
-        lastAction,  // ← Use last known value if NULL
-        lastStage    // ← Use last known value if NULL
+        lastAction,
+        lastStage
       );
-  
-      // Wait 3 seconds before next message (except last one)
+
       if (i < messages.length - 1) {
         console.log(`[SPLIT] Waiting 3s before next message...`);
         await new Promise(resolve => setTimeout(resolve, 3000));
@@ -155,21 +136,28 @@ async function processMessage(senderId, messageText, messageId) {
     }
     console.log(`Response sent to Instagram: "${claudeResponse.response.substring(0, 50)}..."`);
 
-    // Step 9: Update last message timestamp
+    // Step 8: Update last message timestamp
     await User.updateLastMessage(senderId);
 
     return claudeResponse;
 
   } catch (error) {
     console.error(`Error processing message from ${senderId}:`, error);
-    
-    // Send fallback message if something goes wrong
+
+    // Send fallback message
     try {
       await sendMessage(senderId, "Thanks for your message! Let me check on that and get back to you shortly.");
     } catch (sendError) {
       console.error('Failed to send fallback message:', sendError);
     }
-    
+
+    // Send escalation alert with Claude's response
+    await sendEscalationAlert(
+      error,
+      `User: ${senderId}, Message: "${messageText.substring(0, 50)}..."`,
+      claudeResponse?.response  // ← Includes Claude's response if generated
+    );
+
     throw error;
   }
 }
