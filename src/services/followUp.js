@@ -4,6 +4,7 @@ const Conversation = require('../models/Conversation');
 const { generateResponse } = require('./claude');
 const { sendMessage } = require('./instagram');
 const { sendEscalationAlert } = require('./alerting');
+const { sendEscalationAlert, sendFollowUpNotification } = require('./alerting');
 
 /**
  * Find users eligible for follow-up:
@@ -71,6 +72,9 @@ async function sendFollowUp(user) {
   try {
     console.log(`[FOLLOWUP] Processing ${user.user_id}, stage: ${user.qualification_stage}`);
 
+    // ← ADD THIS: Get last 3 messages BEFORE generating follow-up
+    const history = await Conversation.getHistory(user.user_id, 3);
+
     // Generate contextual message
     const followUpMessage = await generateFollowUpMessage(user);
     
@@ -96,7 +100,7 @@ async function sendFollowUp(user) {
         user.user_id,
         'assistant',
         msg,
-        null,  // No meta_message_id for follow-ups
+        null,
         user.latest_next_action,
         user.qualification_stage
       );
@@ -115,6 +119,9 @@ async function sendFollowUp(user) {
           updated_at = NOW()
       WHERE user_id = $1
     `, [user.user_id]);
+
+    // ← ADD THIS: Send notification email with user details and message
+    await sendFollowUpNotification(user, followUpMessage, history);
 
     console.log(`[FOLLOWUP] ✅ Follow-up complete for ${user.user_id}`);
 
