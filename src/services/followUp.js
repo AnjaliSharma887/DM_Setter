@@ -75,6 +75,12 @@ async function sendFollowUp(user) {
     // ← ADD THIS: Get last 3 messages BEFORE generating follow-up
     const history = await Conversation.getHistory(user.user_id, 3);
 
+    // Skip if no history - prevents errors
+    if (!history || history.length === 0) {
+      console.log(`[FOLLOWUP] No conversation history for ${user.user_id}, skipping`);
+      return false;
+    }
+
     // Generate contextual message
     const followUpMessage = await generateFollowUpMessage(user);
     
