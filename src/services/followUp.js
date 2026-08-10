@@ -70,6 +70,14 @@ async function generateFollowUpMessage(user) {
 async function sendFollowUp(user) {
   try {
     console.log(`[FOLLOWUP] Processing ${user.user_id}, stage: ${user.qualification_stage}`);
+    console.log(`[FOLLOWUP] Getting history for ${user.user_id}`);
+
+    const history = await Conversation.getHistory(user.user_id, 3);
+    console.log(`[FOLLOWUP] Got ${history?.length || 0} messages`);
+
+    console.log(`[FOLLOWUP] Calling Claude for message generation`);
+    const followUpMessage = await generateFollowUpMessage(user);
+    console.log(`[FOLLOWUP] Claude returned: ${followUpMessage ? 'YES' : 'NO'}`);
     return true;  // ← Add this
 
     // ← ADD THIS: Get last 3 messages BEFORE generating follow-up
