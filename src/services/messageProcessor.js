@@ -109,7 +109,9 @@ async function processMessage(senderId, messageText, messageId) {
       const fieldsToSave = {
         country: data.country,
         roles: data.roles,
-        experience: data.experience_years ? parseInt(data.experience_years) : null,
+        experience: (data.experience_years && !isNaN(parseInt(data.experience_years))) 
+        ? parseInt(data.experience_years) 
+        : null,
         applicationStatus: data.application_status,
         painPoints: data.pain_points
       };

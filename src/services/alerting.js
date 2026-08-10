@@ -5,6 +5,7 @@ const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
   secure: false,  // Use TLS
+  family: 4,  // ← ADD THIS: Force IPv4
   auth: {
     user: process.env.ALERT_EMAIL,
     pass: process.env.ALERT_EMAIL_PASSWORD
