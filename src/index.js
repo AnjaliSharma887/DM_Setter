@@ -150,4 +150,18 @@ async function startServer() {
   }
 }
 
+app.get('/test/email', async (req, res) => {
+  const { sendEscalationAlert } = require('./services/alerting');
+  try {
+    await sendEscalationAlert(
+      new Error('Test email'),
+      'Manual email test',
+      'This is a test'
+    );
+    res.send('Email attempt made — check logs and inbox');
+  } catch (e) {
+    res.status(500).send('Error: ' + e.message);
+  }
+});
+
 startServer();
