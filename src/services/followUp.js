@@ -70,17 +70,8 @@ async function generateFollowUpMessage(user) {
 async function sendFollowUp(user) {
   try {
     console.log(`[FOLLOWUP] Processing ${user.user_id}, stage: ${user.qualification_stage}`);
-    console.log(`[FOLLOWUP] Getting history for ${user.user_id}`);
-
-    const history = await Conversation.getHistory(user.user_id, 3);
-    console.log(`[FOLLOWUP] Got ${history?.length || 0} messages`);
-
-    console.log(`[FOLLOWUP] Calling Claude for message generation`);
-    const followUpMessage = await generateFollowUpMessage(user);
-    console.log(`[FOLLOWUP] Claude returned: ${followUpMessage ? 'YES' : 'NO'}`);
-    return true;  // ← Add this
-
-    // ← ADD THIS: Get last 3 messages BEFORE generating follow-up
+    
+    // Get last 3 messages ONCE
     const history = await Conversation.getHistory(user.user_id, 3);
 
     // Skip if no history - prevents errors
@@ -89,12 +80,13 @@ async function sendFollowUp(user) {
       return false;
     }
 
-    // Generate contextual message
+    console.log(`[FOLLOWUP] Calling Claude for message generation`);
     const followUpMessage = await generateFollowUpMessage(user);
-    
+    console.log(`[FOLLOWUP] Claude returned: ${followUpMessage ? 'YES' : 'NO'}`);
+
     if (!followUpMessage) {
       console.log(`[FOLLOWUP] No message generated for ${user.user_id}`);
-      return false;  // ← Return false if no message
+      return false;
     }
 
     // Split messages if Claude used |||
@@ -172,8 +164,8 @@ async function runFollowUpJob() {
 
     // Process each user (space out sends to avoid rate limits)
     for (const user of eligibleUsers) {
-      const result = await sendFollowUp(user);
-      if (result) sentCount++;  // ← Increment only on success
+      const result = await sendFollowUp(user);  // ← Capture return value
+      if (result) sentCount++;  // ← Only count if TRUE
       
       // Wait 5 seconds between users
       await new Promise(resolve => setTimeout(resolve, 5000));
