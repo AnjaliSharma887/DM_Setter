@@ -17,7 +17,7 @@ async function findEligibleUsers() {
       SELECT * FROM users
       WHERE last_message_at IS NOT NULL
         AND (NOW() - last_message_at) BETWEEN interval '1 hour' AND interval '24 hours'
-        AND follow_up_count = 0
+        AND follow_up_count < 2
         AND qualification_stage < 8
         AND automation_enabled = true
       ORDER BY last_message_at ASC
