@@ -125,6 +125,7 @@ async function sendFollowUp(user) {
           updated_at = NOW()
       WHERE user_id = $1
     `, [user.user_id]);
+    console.log(`[FOLLOWUP] Updated follow_up_count for ${user.user_id}`);  // ← ADD THIS
 
     // ← ADD THIS: Send notification email with user details and message
     await sendFollowUpNotification(user, followUpMessage, history);
