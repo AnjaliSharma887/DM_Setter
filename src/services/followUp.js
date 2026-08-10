@@ -17,7 +17,7 @@ async function findEligibleUsers() {
       SELECT * FROM users
       WHERE last_message_at IS NOT NULL
         AND (NOW() - last_message_at) BETWEEN interval '2 minutes' AND interval '24 hours'
-        AND follow_up_count < 0
+        AND follow_up_count = 0
         AND qualification_stage < 8
         AND automation_enabled = true
       ORDER BY last_message_at ASC
@@ -122,7 +122,6 @@ async function sendFollowUp(user) {
       UPDATE users 
       SET follow_up_sent_at = NOW(),
           follow_up_count = follow_up_count + 1,
-          updated_at = NOW()
       WHERE user_id = $1
     `, [user.user_id]);
     console.log(`[FOLLOWUP] Updated follow_up_count for ${user.user_id}`);  // ← ADD THIS
