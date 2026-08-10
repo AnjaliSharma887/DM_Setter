@@ -51,8 +51,8 @@ async function generateFollowUpMessage(user) {
     // Modify the last message to indicate silence
     const modifiedHistory = [...history];
     modifiedHistory.push({
-      sender: 'system',
-      message: `[USER HAS BEEN SILENT FOR 20 HOURS. GENERATE A GENTLE FOLLOW-UP MESSAGE BASED ON CONVERSATION CONTEXT. Reference what was discussed. Be warm and not pushy. Do NOT start over - continue from where you left off. Example: "Hey! Did you get a chance to pick a time? Let me know if you need help!"]`
+      sender: 'user',  // ← Change 'system' to 'user'
+      message: `[SYSTEM: User has been silent. GENERATE A GENTLE FOLLOW-UP MESSAGE BASED ON CONVERSATION CONTEXT. Reference what was discussed. Be warm and not pushy. Do NOT start over - continue from where you left off. Example: "Hey! Did you get a chance to pick a time? Let me know if you need help!"]`
     });
 
     const claudeResponse = await generateResponse(modifiedHistory, followUpUser);
