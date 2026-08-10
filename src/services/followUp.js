@@ -17,7 +17,7 @@ async function findEligibleUsers() {
       SELECT * FROM users
       WHERE last_message_at IS NOT NULL
         AND (NOW() - last_message_at) BETWEEN interval '2 minutes' AND interval '24 hours'
-        AND follow_up_count < 2
+        AND follow_up_count < 0
         AND qualification_stage < 8
         AND automation_enabled = true
       ORDER BY last_message_at ASC
@@ -35,7 +35,7 @@ async function findEligibleUsers() {
 async function generateFollowUpMessage(user) {
   try {
     // Get last 3 messages from conversation
-    const history = await Conversation.getHistory(user.user_id, 3);
+    const history = await Conversation.getHistory(user.user_id, 6);
     
     if (history.length === 0) {
       console.log(`[FOLLOWUP] No history for ${user.user_id}, skipping`);
@@ -72,7 +72,7 @@ async function sendFollowUp(user) {
     console.log(`[FOLLOWUP] Processing ${user.user_id}, stage: ${user.qualification_stage}`);
     
     // Get last 3 messages ONCE
-    const history = await Conversation.getHistory(user.user_id, 3);
+    const history = await Conversation.getHistory(user.user_id, 6);
 
     // Skip if no history - prevents errors
     if (!history || history.length === 0) {
