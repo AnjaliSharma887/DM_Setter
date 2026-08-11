@@ -9,6 +9,7 @@ const { processMessage, queueMessage } = require('./services/messageProcessor');
 const { initializeDatabase } = require('./config/database');
 const { sendEscalationAlert } = require('./services/alerting');
 const { runFollowUpJob } = require('./services/followUp');
+const { getUsersWithLeadStatus, getLeadStatusCounts } = require('./services/leadStatus');
 
 // Initialize Express app
 const app = express();
@@ -149,5 +150,16 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+// Get all leads with status
+app.get('/analytics/leads', async (req, res) => {
+  const leads = await getUsersWithLeadStatus();
+  res.json(leads);
+});
+
+app.get('/analytics/leads/counts', async (req, res) => {
+  const counts = await getLeadStatusCounts();
+  res.json(counts);
+});
 
 startServer();
