@@ -121,7 +121,7 @@ async function sendFollowUp(user) {
     await db.query(`
       UPDATE users 
       SET follow_up_sent_at = NOW(),
-          follow_up_count = follow_up_count + 1,
+        follow_up_count = follow_up_count + 1
       WHERE user_id = $1
     `, [user.user_id]);
     console.log(`[FOLLOWUP] Updated follow_up_count for ${user.user_id}`);  // ← ADD THIS
