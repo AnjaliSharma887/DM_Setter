@@ -42,7 +42,7 @@ async function getUsersWithLeadStatus() {
           WHEN follow_up_sent_at IS NOT NULL
                AND last_message_at <= follow_up_sent_at
             THEN 'Cold'
-          WHEN qualified = true AND qualification_stage < 8
+          WHEN qualified = true AND qualification_stage >= 4
             THEN 'Qualified'
           ELSE 'In Progress'
         END AS lead_status

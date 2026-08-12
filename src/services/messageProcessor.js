@@ -121,6 +121,15 @@ async function processMessage(senderId, messageText, messageId) {
       if (data.qualified !== null && data.qualified !== undefined) {
         await User.updateQualification(senderId, data.qualified);
       }
+
+      // Save disqualification reason (only when disqualified)
+      if (data.disqualified_reason) {
+        await db.query(
+          `UPDATE users SET disqualified_reason = $1 WHERE user_id = $2`,
+          [data.disqualified_reason, senderId]
+        );
+        console.log(`Saved disqualified_reason: ${data.disqualified_reason} for ${senderId}`);
+      }
     }
 
     // Step 7: Split and send response with delays
