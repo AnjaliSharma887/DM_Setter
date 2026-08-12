@@ -11,10 +11,14 @@ const { sendEscalationAlert } = require('./services/alerting');
 const { runFollowUpJob } = require('./services/followUp');
 const { getUsersWithLeadStatus, getLeadStatusCounts } = require('./services/leadStatus');
 
+const cookieParser = require('cookie-parser');
+const dashboardRouter = require('./dashboard');
+
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
-
+app.use(cookieParser());
+app.use(dashboardRouter);
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
