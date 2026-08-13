@@ -8,7 +8,7 @@ const db = require('../config/database');
 // ============ MESSAGE DEBOUNCING ============
 // Store pending messages per user
 const pendingMessages = {};
-const DEBOUNCE_TIME = 10000; // 10 seconds
+const DEBOUNCE_TIME = 15000; // 10 seconds
 
 /**
  * Queue message and wait for more messages before processing
