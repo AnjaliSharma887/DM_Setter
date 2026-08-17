@@ -291,8 +291,21 @@ async function generateResponse(conversationHistory, userProfile) {
     // Add user profile context to the latest message
     if (messages.length > 0 && userProfile) {
       // Define profileContext FIRST
-      const profileContext = `\n\n[USER PROFILE FROM DATABASE]\nCountry: ${userProfile.country || 'unknown'}\nRoles: ${userProfile.desired_roles || 'unknown'}\nExperience: ${userProfile.experience_years || 'unknown'}\nApplication Status: ${userProfile.application_status || 'unknown'}\nPain Points: ${userProfile.pain_points || 'unknown'}\nCurrent Stage: ${userProfile.qualification_stage || 1}\nQualified: ${userProfile.qualified || 'unknown'}`;
+      const profileContext = `\n\n[USER PROFILE FROM DATABASE]
+      Country: ${userProfile.country || 'unknown'}
+      Roles: ${userProfile.desired_roles || 'unknown'}
+      Experience: ${userProfile.experience_years || 'unknown'}
+      Application Status: ${userProfile.application_status || 'unknown'}
+      Pain Points: ${userProfile.pain_points || 'unknown'}
+      Current Stage: ${userProfile.qualification_stage || 1}
+      Qualified: ${userProfile.qualified || 'unknown'}
 
+      CRITICAL INSTRUCTION: This user is at qualification_stage ${userProfile.qualification_stage || 1}. 
+      You MUST continue from STEP ${userProfile.qualification_stage || 1} or later. 
+      NEVER go back to an earlier step. 
+      NEVER re-ask the country question if country is already known.
+      If stage is 8, the conversation is COMPLETE — just respond warmly.`;
+      
       // Find the last user message
       const lastUserIndex = [...messages]
         .map((m, i) => ({ ...m, i }))
