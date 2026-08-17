@@ -18,7 +18,6 @@ async function findEligibleUsers() {
       WHERE last_message_at IS NOT NULL
         AND qualification_stage < 8
         AND automation_enabled = true
-        AND escalation_status = 'none'
         AND (
           (follow_up_count = 0 AND (NOW() - last_message_at) BETWEEN interval '8 hours' AND interval '24 hours')
           OR
