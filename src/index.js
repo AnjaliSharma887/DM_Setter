@@ -51,8 +51,9 @@ app.get('/webhook/instagram', (req, res) => {
 // Webhook receiver (incoming Instagram DMs)
 app.post('/webhook/instagram', async (req, res) => {
   try {
-    console.log(`Webhook received: ${JSON.stringify(req.body).substring(0, 200)}`);
-
+    console.log('[FULL WEBHOOK]', JSON.stringify(req.body));  // ← CHANGE THIS (was substring 200)
+    // console.log(`Webhook received: ${JSON.stringify(req.body).substring(0, 200)}`);
+    
     // Send 200 immediately (Instagram requires fast response)
     res.sendStatus(200);
 
