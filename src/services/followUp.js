@@ -16,10 +16,14 @@ async function findEligibleUsers() {
     const result = await db.query(`
       SELECT * FROM users
       WHERE last_message_at IS NOT NULL
-        AND (NOW() - last_message_at) BETWEEN interval '2 minutes' AND interval '24 hours'
-        AND follow_up_count = 0
         AND qualification_stage < 8
         AND automation_enabled = true
+        AND escalation_status = 'none'
+        AND (
+          (follow_up_count = 0 AND (NOW() - last_message_at) BETWEEN interval '8 hours' AND interval '24 hours')
+          OR
+          (follow_up_count = 1 AND (NOW() - last_message_at) BETWEEN interval '23 hours' AND interval '24 hours')
+        )
       ORDER BY last_message_at ASC
     `);
     return result.rows;
