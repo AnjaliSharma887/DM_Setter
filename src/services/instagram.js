@@ -3,6 +3,12 @@ const axios = require('axios');
 // Send message via Instagram API
 async function sendMessage(recipientId, messageText) {
   try {
+    // ── TEST MODE SAFETY ──
+    if (process.env.TEST_MODE === 'true') {
+      console.log(`[TEST MODE] Would send to ${recipientId}: "${messageText}"`);
+      return { test_mode: true, skipped: true };
+    }
+    // ── END TEST MODE ──
     const pageId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
     const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
 
