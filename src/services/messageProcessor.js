@@ -68,7 +68,24 @@ async function processMessage(senderId, messageText, messageId) {
     const user = await User.findOrCreate(senderId);
     console.log(`User found/created: ${senderId}, stage: ${user.qualification_stage}`);
 
-    // ← ADD THIS CHECK HERE
+    // ← ADD THIS CHECK
+    // If user came from comment flow and just answered the pain point question
+    if (user.came_from_comment && user.qualification_stage === 2) {
+      console.log(`[COMMENT FLOW] Capturing pain point for ${senderId}`);
+      
+      // Store the pain point (user's answer)
+      await db.query(
+        `UPDATE users 
+         SET pain_points = $1, 
+             qualification_stage = 5,
+             automation_enabled = true
+         WHERE user_id = $2`,
+        [messageText, senderId]
+      );
+      
+      console.log(`[COMMENT FLOW] Stored pain_points: "${messageText}", enabled automation`);
+    }
+
     if (!user.automation_enabled) {
       console.log(`[DISABLED] Automation off for ${senderId}, skipping processing`);
       return;  // Exit early, don't process

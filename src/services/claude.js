@@ -299,6 +299,7 @@ async function generateResponse(conversationHistory, userProfile) {
       Pain Points: ${userProfile.pain_points || 'unknown'}
       Current Stage: ${userProfile.qualification_stage || 1}
       Qualified: ${userProfile.qualified || 'unknown'}
+      Came from comment flow: ${userProfile.came_from_comment ? 'Yes' : 'No'}
 
       CRITICAL INSTRUCTION: This user is at qualification_stage ${userProfile.qualification_stage || 1}. 
       You MUST continue from STEP ${userProfile.qualification_stage || 1} or later. 

@@ -10,7 +10,7 @@ const { initializeDatabase } = require('./config/database');
 const { sendEscalationAlert } = require('./services/alerting');
 const { runFollowUpJob } = require('./services/followUp');
 const { getUsersWithLeadStatus, getLeadStatusCounts } = require('./services/leadStatus');
-
+const db = require('./config/database');
 const cookieParser = require('cookie-parser');
 const dashboardRouter = require('./dashboard');
 
@@ -81,6 +81,38 @@ app.post('/webhook/instagram', async (req, res) => {
               continue;
             }
 
+            ////////////////
+            // Handle postback (button clicks)
+            if (event.postback) {
+              try {
+                const senderId = event.sender.id;
+                const postbackTitle = event.postback.title;  // "UK/US/Canada" or "Others 🌍"
+        
+                console.log(`[POSTBACK] From ${senderId}: "${postbackTitle}"`);
+        
+                // Determine country from button title
+                let country = null;
+                if (postbackTitle.includes('UK') || postbackTitle.includes('US') || postbackTitle.includes('Canada')) {
+                  country = 'UK/US/Canada';
+                } else if (postbackTitle.includes('Others') || postbackTitle.includes('🌍')) {
+                  country = 'Others';
+                }
+        
+                if (country) {
+                  // Update user's country in DB
+                  await db.query(
+                    `UPDATE users SET country = $1, qualification_stage = 2, came_from_comment = true WHERE user_id = $2`,
+                    [country, senderId]
+                  );
+                  console.log(`[POSTBACK] Stored country: ${country} for ${senderId}`);
+                }
+        
+              } catch (postbackError) {
+                console.error('Postback error:', postbackError);
+              }
+            }
+            ///////////////
+
             const senderId = event.sender.id;
             const messageText = event.message.text;
             const messageId = event.message.mid;
@@ -101,22 +133,36 @@ app.post('/webhook/instagram', async (req, res) => {
         }
       }
 
+      /////////////////
       if (changes) {
         for (const event of changes) {
-          if (event.field === 'comments') {
-            const comment = event.value;
-            const senderId = comment.from.id;
-            const messageText = comment.text;
-            const mediaId = comment.media.id;
-            
-            console.log(`Comment from ${senderId} on ${mediaId}: "${messageText}"`);
-            
-            // Process comment (trigger check, queue for Emma handling, etc.)
-            // queueComment(senderId, messageText, mediaId);
+        if (event.field === 'comments') {
+          const comment = event.value;
+      
+          // Only REELS
+          if (comment.media.media_product_type !== 'REELS') {
+            console.log(`Skipping non-REEL comment`);
+            continue;
           }
+      
+          const senderId = comment.from.id;
+          const username = comment.from.username;
+          const mediaId = comment.media.id;
+      
+          console.log(`Comment from ${username} on REEL ${mediaId}`);
+      
+          // Create/find user and mark as from comment
+          await db.query(
+            `INSERT INTO users (user_id, username, came_from_comment, comment_media_id, qualification_stage, automation_enabled)
+            VALUES ($1, $2, true, $3, 1, false)
+            ON CONFLICT (user_id) DO UPDATE SET came_from_comment = true, comment_media_id = $3`,
+            [senderId, username, mediaId]
+          );
         }
       }
     }
+      ////////////////
+  }
 
   } catch (error) {
     console.error('Webhook error:', error);
