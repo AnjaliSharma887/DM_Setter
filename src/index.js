@@ -160,17 +160,17 @@ app.post('/webhook/instagram', async (req, res) => {
           }
       
           const senderId = comment.from.id;
-          const username = comment.from.username;
+          const instagram_handle = comment.from.instagram_handle;
           const mediaId = comment.media.id;
       
-          console.log(`Comment from ${username} on REEL ${mediaId}`);
+          console.log(`Comment from ${instagram_handle} on REEL ${mediaId}`);
       
           // Create/find user and mark as from comment
           await db.query(
-            `INSERT INTO users (user_id, username, came_from_comment, comment_media_id, qualification_stage, automation_enabled)
+            `INSERT INTO users (user_id, instagram_handle, came_from_comment, comment_media_id, qualification_stage, automation_enabled)
             VALUES ($1, $2, true, $3, 1, false)
             ON CONFLICT (user_id) DO UPDATE SET came_from_comment = true, comment_media_id = $3`,
-            [senderId, username, mediaId]
+            [senderId, instagram_handle, mediaId]
           );
         }
       }
