@@ -51,10 +51,8 @@ app.get('/webhook/instagram', (req, res) => {
 // Webhook receiver (incoming Instagram DMs)
 app.post('/webhook/instagram', async (req, res) => {
   try {
-    console.log('[FULL WEBHOOK]', JSON.stringify(req.body));  // ← CHANGE THIS (was substring 200)
-    // console.log(`Webhook received: ${JSON.stringify(req.body).substring(0, 200)}`);
-    
-    // Send 200 immediately (Instagram requires fast response)
+    console.log('[FULL WEBHOOK]', JSON.stringify(req.body));
+
     res.sendStatus(200);
 
     const { entry } = req.body;
@@ -66,43 +64,56 @@ app.post('/webhook/instagram', async (req, res) => {
 
     // Process each entry
     for (const entryItem of entry) {
-      const { messaging } = entryItem;
+      const { messaging, changes } = entryItem;
 
-      if (!messaging) continue;
+      if (messaging) {
+        for (const event of messaging) {
+          try {
+            // Skip echo messages (messages sent BY us)
+            if (event.message && event.message.is_echo) {
+              console.log('Skipping echo message');
+              continue;
+            }
 
-      for (const event of messaging) {
-        // ← ADD TRY-CATCH HERE
-        try {
-          // Skip echo messages (messages sent BY us)
-          if (event.message && event.message.is_echo) {
-            console.log('Skipping echo message');
-            continue;
+            // Skip if no text message
+            if (!event.message || !event.message.text) {
+              console.log('No text in message, skipping');
+              continue;
+            }
+
+            const senderId = event.sender.id;
+            const messageText = event.message.text;
+            const messageId = event.message.mid;
+
+            console.log(`DM from ${senderId}: "${messageText}"`);
+
+            // Process message asynchronously
+            queueMessage(senderId, messageText, messageId);
+            console.log(`Message queued for ${senderId}, waiting 10s for more...`);
+
+          } catch (eventError) {
+            console.error('Error processing event:', eventError);
+            await sendEscalationAlert(
+              eventError,
+              `Webhook event error - User: ${event.sender?.id}, Message: "${event.message?.text?.substring(0, 50)}..."`
+            );
           }
+        }
+      }
 
-          // Skip if no text message
-          if (!event.message || !event.message.text) {
-            console.log('No text in message, skipping');
-            continue;
+      if (changes) {
+        for (const event of changes) {
+          if (event.field === 'comments') {
+            const comment = event.value;
+            const senderId = comment.from.id;
+            const messageText = comment.text;
+            const mediaId = comment.media.id;
+            
+            console.log(`Comment from ${senderId} on ${mediaId}: "${messageText}"`);
+            
+            // Process comment (trigger check, queue for Emma handling, etc.)
+            // queueComment(senderId, messageText, mediaId);
           }
-
-          const senderId = event.sender.id;
-          const messageText = event.message.text;
-          const messageId = event.message.mid;
-
-          console.log(`DM from ${senderId}: "${messageText}"`);
-
-          // Process message asynchronously
-          queueMessage(senderId, messageText, messageId);
-          console.log(`Message queued for ${senderId}, waiting 10s for more...`);
-
-        } catch (eventError) {
-          // ← SEND ESCALATION ALERT
-          console.error('Error processing event:', eventError);
-          
-          await sendEscalationAlert(
-            eventError,
-            `Webhook event error - User: ${event.sender?.id}, Message: "${event.message?.text?.substring(0, 50)}..."`
-          );
         }
       }
     }
