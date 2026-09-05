@@ -114,14 +114,28 @@ app.post('/webhook/instagram', async (req, res) => {
             ///////////////
 
             const senderId = event.sender.id;
+            
+            // Check if this user came from comment flow
+            const userCheck = await db.query(
+              `SELECT came_from_comment FROM users WHERE user_id = $1`,
+              [senderId]
+            );
+            
+            const fromComment = userCheck.rows.length > 0 && userCheck.rows[0].came_from_comment;
+            
+            // Only process if from comment flow
+            if (!fromComment) {
+              console.log(`[SKIP] DM from ${senderId} (not from comment flow)`);
+              continue;
+            }
+
             const messageText = event.message.text;
             const messageId = event.message.mid;
 
-            console.log(`DM from ${senderId}: "${messageText}"`);
+            console.log(`[COMMENT FLOW] From ${senderId}: "${messageText}"`);
 
             // Process message asynchronously
             queueMessage(senderId, messageText, messageId);
-            console.log(`Message queued for ${senderId}, waiting 10s for more...`);
 
           } catch (eventError) {
             console.error('Error processing event:', eventError);
