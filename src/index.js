@@ -13,6 +13,7 @@ const { getUsersWithLeadStatus, getLeadStatusCounts } = require('./services/lead
 const db = require('./config/database');
 const cookieParser = require('cookie-parser');
 const dashboardRouter = require('./dashboard');
+const TEST_MODE = process.env.TEST_MODE === 'true';
 
 // Initialize Express app
 const app = express();
