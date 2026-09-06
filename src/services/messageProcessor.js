@@ -72,18 +72,20 @@ async function processMessage(senderId, messageText, messageId) {
     // If user came from comment flow and just answered the pain point question
     if (user.came_from_comment && user.qualification_stage === 2) {
       console.log(`[COMMENT FLOW] Capturing pain point for ${senderId}`);
+
+      // Only auto-enable automation if explicitly allowed (safety for testing)
+      const shouldAutoEnable = process.env.AUTO_ENABLE_COMMENT_FLOW === 'true';
       
       // Store the pain point (user's answer)
       await db.query(
         `UPDATE users 
          SET pain_points = $1, 
              qualification_stage = 5,
-             automation_enabled = true
+             automation_enabled = CASE WHEN $3 = true THEN true ELSE automation_enabled END
          WHERE user_id = $2`,
-        [messageText, senderId]
+        [messageText, senderId, shouldAutoEnable]
       );
-      
-      console.log(`[COMMENT FLOW] Stored pain_points: "${messageText}", enabled automation`);
+      console.log(`[COMMENT FLOW] Stored pain_points, auto-enable: ${shouldAutoEnable}`);
     }
 
     if (!user.automation_enabled) {
