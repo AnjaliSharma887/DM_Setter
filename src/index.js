@@ -161,7 +161,7 @@ app.post('/webhook/instagram', async (req, res) => {
           }
       
           const senderId = comment.from.id;
-          const instagram_handle = comment.from.instagram_handle;
+          const instagram_handle = comment.from.username;  // ← use "username" from API
           const mediaId = comment.media.id;
       
           console.log(`Comment from ${instagram_handle} on REEL ${mediaId}`);
