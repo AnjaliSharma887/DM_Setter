@@ -70,83 +70,74 @@ app.post('/webhook/instagram', async (req, res) => {
       if (messaging) {
         for (const event of messaging) {
           try {
-            // Skip echo messages (messages sent BY us)
-            if (event.message && event.message.is_echo) {
-              console.log('Skipping echo message');
-              continue;
-            }
-
-            // Skip if no text message
-            if (!event.message || !event.message.text) {
-              console.log('No text in message, skipping');
-              continue;
-            }
-
-            ////////////////
-            // Handle postback (button clicks)
-            if (event.postback) {
-              try {
-                const senderId = event.sender.id;
-                const postbackTitle = event.postback.title;  // "UK/US/Canada" or "Others 🌍"
-        
-                console.log(`[POSTBACK] From ${senderId}: "${postbackTitle}"`);
-        
-                // Determine country from button title
-                let country = null;
-                if (postbackTitle.includes('UK') || postbackTitle.includes('US') || postbackTitle.includes('Canada')) {
-                  country = 'UK/US/Canada';
-                } else if (postbackTitle.includes('Others') || postbackTitle.includes('🌍')) {
-                  country = 'Others';
-                }
-        
-                if (country) {
-                  // Update user's country in DB
-                  await db.query(
-                    `UPDATE users SET country = $1, qualification_stage = 2, came_from_comment = true WHERE user_id = $2`,
-                    [country, senderId]
-                  );
-                  console.log(`[POSTBACK] Stored country: ${country} for ${senderId}`);
-                }
-        
-              } catch (postbackError) {
-                console.error('Postback error:', postbackError);
-              }
-            }
-            ///////////////
-
+          // Handle postback (button clicks) — CHECK THIS FIRST, BEFORE MESSAGE CHECKS
+          if (event.postback) {
             const senderId = event.sender.id;
-            
-            // Check if this user came from comment flow
-            const userCheck = await db.query(
-              `SELECT came_from_comment FROM users WHERE user_id = $1`,
-              [senderId]
-            );
-            
-            const fromComment = userCheck.rows.length > 0 && userCheck.rows[0].came_from_comment;
-            
-            // Only process if from comment flow
-            if (!fromComment) {
-              console.log(`[SKIP] DM from ${senderId} (not from comment flow)`);
-              continue;
+            const postbackTitle = event.postback.title;
+
+            console.log(`[POSTBACK] From ${senderId}: "${postbackTitle}"`);
+
+            let country = null;
+            if (postbackTitle.includes('UK') || postbackTitle.includes('US') || postbackTitle.includes('Canada') || postbackTitle.includes('CA')) {
+              country = 'UK/US/Canada';
+            } else if (postbackTitle.includes('Others') || postbackTitle.includes('🌍')) {
+              country = 'Others';
             }
 
-            const messageText = event.message.text;
-            const messageId = event.message.mid;
+            if (country) {
+              await db.query(
+              `UPDATE users SET country = $1, qualification_stage = 2, came_from_comment = true WHERE user_id = $2`,
+              [country, senderId]
+              );
+              console.log(`[POSTBACK] Stored country: ${country} for ${senderId}`);
+            }
 
-            console.log(`[COMMENT FLOW] From ${senderId}: "${messageText}"`);
-
-            // Process message asynchronously
-            queueMessage(senderId, messageText, messageId);
-
-          } catch (eventError) {
-            console.error('Error processing event:', eventError);
-            await sendEscalationAlert(
-              eventError,
-              `Webhook event error - User: ${event.sender?.id}, Message: "${event.message?.text?.substring(0, 50)}..."`
-            );
+            continue;  // Done with postback, skip to next event
           }
+
+          // Skip echo messages (messages sent BY us)
+          if (event.message && event.message.is_echo) {
+            console.log('Skipping echo message');
+            continue;
+          }
+
+          // Skip if no text message
+          if (!event.message || !event.message.text) {
+            console.log('No text in message, skipping');
+            continue;
+          }
+
+          const senderId = event.sender.id;
+    
+          // Check if this user came from comment flow
+          const userCheck = await db.query(
+            `SELECT came_from_comment FROM users WHERE user_id = $1`,
+            [senderId]
+          );
+    
+          const fromComment = userCheck.rows.length > 0 && userCheck.rows[0].came_from_comment;
+    
+          if (!fromComment) {
+            console.log(`[SKIP] DM from ${senderId} (not from comment flow)`);
+            continue;
+          }
+
+          const messageText = event.message.text;
+          const messageId = event.message.mid;
+
+          console.log(`[COMMENT FLOW] From ${senderId}: "${messageText}"`);
+
+          queueMessage(senderId, messageText, messageId);
+
+        } catch (eventError) {
+          console.error('Error processing event:', eventError);
+          await sendEscalationAlert(
+            eventError,
+              `Webhook event error - User: ${event.sender?.id}, Message: "${event.message?.text?.substring(0, 50)}..."`
+          );
         }
       }
+    }
 
       /////////////////
       if (changes) {
@@ -161,28 +152,47 @@ app.post('/webhook/instagram', async (req, res) => {
           }
       
           const senderId = comment.from.id;
-          const instagram_handle = comment.from.username;  // ← use "username" from API
+          const instagram_handle = comment.from.username;
           const mediaId = comment.media.id;
-      
-          console.log(`Comment from ${instagram_handle} on REEL ${mediaId}`);
-      
-          // Create/find user and mark as from comment
-          await db.query(
-            `INSERT INTO users (user_id, instagram_handle, came_from_comment, comment_media_id, qualification_stage, automation_enabled)
-            VALUES ($1, $2, true, $3, 1, false)
-            ON CONFLICT (user_id) DO UPDATE SET came_from_comment = true, comment_media_id = $3`,
-            [senderId, instagram_handle, mediaId]
+
+          ////////////////////
+          const existingUser = await db.query(
+            `SELECT qualification_stage, reel_id FROM users WHERE user_id = $1`,
+            [senderId]
           );
-        }
-      }
-    }
-      ////////////////
-  }
+
+          if (existingUser.rows.length === 0) {
+            // New user from comment
+            await db.query(
+              `INSERT INTO users (user_id, instagram_handle, came_from_comment, reel_id, qualification_stage, automation_enabled)
+              VALUES ($1, $2, true, $3, 1, false)`,
+              [senderId, instagram_handle, mediaId]
+            );
+            console.log(`[NEW COMMENT LEAD] User ${senderId} from REEL ${mediaId}`);
+          } else {
+          // User already exists
+          const { qualification_stage, reel_id } = existingUser.rows[0];
+
+          if (reel_id !== mediaId) {
+            // Commented on a DIFFERENT reel - update reel_id but DON'T reset stage
+            await db.query(
+              `UPDATE users SET reel_id = $1 WHERE user_id = $2`,
+              [mediaId, senderId]
+            );
+            console.log(`[MULTI-REEL] User ${senderId} also commented on REEL ${mediaId} (was on ${reel_id})`);
+          } else {
+            // Same reel - ignore
+            console.log(`[DUPLICATE] User ${senderId} already commented on this reel`);
+          }
+        }  // closes the else block (user exists)
+      }  // closes the if (event.field === 'comments')
+    }  // closes the for (const event of changes)
+  }  // closes the if (changes)
+}  // closes the for (const entryItem of entry)
 
   } catch (error) {
     console.error('Webhook error:', error);
-  }
-});
+  }});
 
 
 // Error handling
