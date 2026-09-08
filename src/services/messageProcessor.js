@@ -70,8 +70,9 @@ async function processMessage(senderId, messageText, messageId) {
 
     // ← ADD THIS CHECK
     // If user came from comment flow and just answered the pain point question
-    if (user.came_from_comment && user.qualification_stage === 2) {
-      console.log(`[COMMENT FLOW] Capturing pain point for ${senderId}`);
+    const AMS_JEWELS_ID = '1418607430170792';  // casa_roza's user_id
+    if (user.came_from_comment && user.qualification_stage === 2 && senderId === AMS_JEWELS_ID)  {
+      console.log(`[COMMENT FLOW] Capturing pain point for ${senderId} (casa_roza)`);
 
       // Only auto-enable automation if explicitly allowed (safety for testing)
       const shouldAutoEnable = process.env.AUTO_ENABLE_COMMENT_FLOW === 'true';
@@ -81,11 +82,25 @@ async function processMessage(senderId, messageText, messageId) {
         `UPDATE users 
          SET pain_points = $1, 
              qualification_stage = 5,
-             automation_enabled = CASE WHEN $3 = true THEN true ELSE automation_enabled END
+             automation_enabled = true
          WHERE user_id = $2`,
-        [messageText, senderId, shouldAutoEnable]
+        [messageText, senderId]
       );
-      console.log(`[COMMENT FLOW] Stored pain_points, auto-enable: ${shouldAutoEnable}`);
+
+      console.log(`[COMMENT FLOW] Auto-enabled automation for casa_roza`);
+    } else if (user.came_from_comment && user.qualification_stage === 2) {
+      // For other comment-flow users (not casa_roza), just capture pain points, don't auto-enable
+      console.log(`[COMMENT FLOW] Capturing pain point for ${senderId} (other user)`);
+
+      await db.query(
+        `UPDATE users 
+         SET pain_points = $1, 
+             qualification_stage = 5
+         WHERE user_id = $2`,
+        [messageText, senderId]
+      );
+
+      console.log(`[COMMENT FLOW] Stored pain_points, automation disabled for testing`);
     }
 
     if (!user.automation_enabled) {
