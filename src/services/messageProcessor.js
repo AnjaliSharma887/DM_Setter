@@ -70,7 +70,7 @@ async function processMessage(senderId, messageText, messageId) {
 
     // ← ADD THIS CHECK
     // If user came from comment flow and just answered the pain point question
-    const AMS_JEWELS_ID = '1418607430170792';  // casa_roza's user_id
+    const AMS_JEWELS_ID = '1406858894849070';  // ams_jewels's user_id
     if (user.came_from_comment && user.qualification_stage === 2 && senderId === AMS_JEWELS_ID)  {
       console.log(`[COMMENT FLOW] Capturing pain point for ${senderId} (casa_roza)`);
 
