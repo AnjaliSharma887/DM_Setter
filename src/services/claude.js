@@ -124,9 +124,9 @@ Sound good?"
 STEP 7: User says yes
 
 SEND MESSAGE 7:
-"Okay awesome, here is the calendar link.
-https://calendar.google.com/calendar/u/0/r?pli=1
-Let me know if you find a time, the link has been a bit weird today!"
+"Great! Here’s the calendar link — please choose a time that works best for you.
+https://api.leadconnectorhq.com/widget/booking/teI1oDuQvaJjQO9Szkrc
+Will you let me know if you find a time, the link has been a bit weird today! 😟"
 
 ---
 
