@@ -70,26 +70,6 @@ app.post('/webhook/instagram', async (req, res) => {
       if (messaging) {
         for (const event of messaging) {
           try {
-
-          // Handle postback (button clicks)
-            if (event.postback) {
-              const senderId = event.sender.id;
-              const postbackTitle = event.postback.title;
-
-              if (postbackTitle === 'Sound good?') {
-                // User clicked the "Sounds Good?" button
-                const user = await User.findOrCreate(senderId);
-                await db.query(
-                  `UPDATE users SET came_from_comment = true, automation_enabled = true WHERE user_id = $1`,
-                  [senderId]
-                );
-                console.log(`[MANYCHAT HANDOFF] User ${senderId} clicked button, automation enabled`);
-                // Emma takes over from here
-                continue;
-              }
-              // ... other postback handling
-            }
-
             // Skip echo messages (messages sent BY us)
             if (event.message && event.message.is_echo) {
               console.log('Skipping echo message');
@@ -103,36 +83,37 @@ app.post('/webhook/instagram', async (req, res) => {
             }
 
             const senderId = event.sender.id;
+      const messageText = event.message.text;
+      const messageId = event.message.mid;
 
-            // Check if this user came from comment flow
-            const userCheck = await db.query(
-              `SELECT came_from_comment FROM users WHERE user_id = $1`,
-              [senderId]
-            );
+      // Check if user came from comment flow
+      const userCheck = await db.query(
+        `SELECT came_from_comment FROM users WHERE user_id = $1`,
+        [senderId]
+      );
 
-            const fromComment = userCheck.rows.length > 0 && userCheck.rows[0].came_from_comment;
+      const fromComment = userCheck.rows.length > 0 && userCheck.rows[0].came_from_comment;
 
-            if (!fromComment) {
-              console.log(`[SKIP] DM from ${senderId} (not from comment flow)`);
-              continue;
-            }
-
-            const messageText = event.message.text;
-            const messageId = event.message.mid;
-
-            console.log(`[COMMENT FLOW] From ${senderId}: "${messageText}"`);
-
-            queueMessage(senderId, messageText, messageId);
-
-          } catch (eventError) {
-            console.error('Error processing event:', eventError);
-            await sendEscalationAlert(
-              eventError,
-              `Webhook event error - User: ${event.sender?.id}, Message: "${event.message?.text?.substring(0, 50)}..."`
-            );
-          }
-        }
+      // If user is from comment flow and replies affirmatively, enable automation
+      if (fromComment && ['yes', 'yeah', 'yep', 'ok', 'okay', 'sure'].includes(messageText.toLowerCase())) {
+        await db.query(
+          `UPDATE users SET automation_enabled = true WHERE user_id = $1`,
+          [senderId]
+        );
+        console.log(`[MANYCHAT HANDOFF] User ${senderId} replied "${messageText}", automation enabled`);
+        queueMessage(senderId, messageText, messageId);
+      } else if (fromComment) {
+        console.log(`[COMMENT FLOW] From ${senderId}: "${messageText}"`);
+        queueMessage(senderId, messageText, messageId);
+      } else {
+        console.log(`[SKIP] DM from ${senderId} (not from comment flow)`);
       }
+
+    } catch (eventError) {
+      console.error('Error processing event:', eventError);
+    }
+  }
+}
 
       if (changes) {
         for (const event of changes) {
