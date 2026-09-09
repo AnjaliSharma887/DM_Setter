@@ -76,7 +76,7 @@ app.post('/webhook/instagram', async (req, res) => {
               const senderId = event.sender.id;
               const postbackTitle = event.postback.title;
 
-              if (postbackTitle === 'Sounds Good?') {
+              if (postbackTitle === 'Sounds Good') {
                 // User clicked the "Sounds Good?" button
                 const user = await User.findOrCreate(senderId);
                 await db.query(
@@ -151,7 +151,7 @@ app.post('/webhook/instagram', async (req, res) => {
           const commentText = comment.text;
 
           // Check if the comment is "Help" and on the specific carousel post
-          if (mediaId === 'YOUR_POST_ID' && commentText.toLowerCase() === 'help') {
+          if (mediaId === '18019896590872740' && commentText.toLowerCase() === 'help') {
             console.log(`[MANYCHAT TRIGGER] "Help" comment on post ${mediaId}`);
           const existingUser = await db.query(
           `SELECT reel_id FROM users WHERE user_id = $1`,
