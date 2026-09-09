@@ -129,11 +129,13 @@ app.post('/webhook/instagram', async (req, res) => {
           const senderId = comment.from.id;
           const instagram_handle = comment.from.username;
           const mediaId = comment.media.id;
+          const commentText = comment.text;
 
-          ////////////////////
+          // Check if the comment is "Help" and on the specific carousel post
+          if (commentText.toLowerCase() === 'help' && mediaId === 'YOUR_CAROUSEL_MEDIA_ID') {
           const existingUser = await db.query(
-            `SELECT qualification_stage, reel_id FROM users WHERE user_id = $1`,
-            [senderId]
+          `SELECT reel_id FROM users WHERE user_id = $1`,
+          [senderId]
           );
 
           if (existingUser.rows.length === 0) {
@@ -146,28 +148,31 @@ app.post('/webhook/instagram', async (req, res) => {
             console.log(`[NEW COMMENT LEAD] User ${senderId} from REEL ${mediaId}`);
           } else {
           // User already exists
-          const { qualification_stage, reel_id } = existingUser.rows[0];
+            const { reel_id } = existingUser.rows[0];
 
           if (reel_id !== mediaId) {
-            // Commented on a DIFFERENT reel - update reel_id but DON'T reset stage
-            await db.query(
-              `UPDATE users SET reel_id = $1 WHERE user_id = $2`,
-              [mediaId, senderId]
-            );
-            console.log(`[MULTI-REEL] User ${senderId} also commented on REEL ${mediaId} (was on ${reel_id})`);
-          } else {
-            // Same reel - ignore
-            console.log(`[DUPLICATE] User ${senderId} already commented on this reel`);
+      // Commented on a DIFFERENT reel - update reel_id but DON'T reset stage
+      await db.query(
+        `UPDATE users SET reel_id = $1 WHERE user_id = $2`,
+        [mediaId, senderId]
+      );
+      console.log(`[MULTI-REEL] User ${senderId} also commented on REEL ${mediaId} (was on ${reel_id})`);
+    } else {
+      // Same reel - ignore
+      console.log(`[DUPLICATE] User ${senderId} already commented on this reel`);
+    }
+  }
+} else {
+  console.log(`[SKIP] Comment "${commentText}" on REEL ${mediaId} does not match the trigger criteria`);
+ }
           }
-        }  // closes the else block (user exists)
-      }  // closes the if (event.field === 'comments')
-    }  // closes the for (const event of changes)
-  }  // closes the if (changes)
-}  // closes the for (const entryItem of entry)
-
+        }
+      }
+    }
   } catch (error) {
     console.error('Webhook error:', error);
-  }});
+  }
+});
 
 
 // Error handling
