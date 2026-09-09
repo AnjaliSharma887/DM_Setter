@@ -70,51 +70,70 @@ app.post('/webhook/instagram', async (req, res) => {
       if (messaging) {
         for (const event of messaging) {
           try {
-          // Skip echo messages (messages sent BY us)
-          if (event.message && event.message.is_echo) {
-            console.log('Skipping echo message');
-            continue;
-          }
 
-          // Skip if no text message
-          if (!event.message || !event.message.text) {
-            console.log('No text in message, skipping');
-            continue;
-          }
+          // Handle postback (button clicks)
+            if (event.postback) {
+              const senderId = event.sender.id;
+              const postbackTitle = event.postback.title;
 
-          const senderId = event.sender.id;
-    
-          // Check if this user came from comment flow
-          const userCheck = await db.query(
-            `SELECT came_from_comment FROM users WHERE user_id = $1`,
-            [senderId]
-          );
-    
-          const fromComment = userCheck.rows.length > 0 && userCheck.rows[0].came_from_comment;
-    
-          if (!fromComment) {
-            console.log(`[SKIP] DM from ${senderId} (not from comment flow)`);
-            continue;
-          }
+              if (postbackTitle === 'Sounds Good?') {
+                // User clicked the "Sounds Good?" button
+                const user = await User.findOrCreate(senderId);
+                await db.query(
+                  `UPDATE users SET came_from_comment = true, automation_enabled = true WHERE user_id = $1`,
+                  [senderId]
+                );
+                console.log(`[MANYCHAT HANDOFF] User ${senderId} clicked button, automation enabled`);
+                // Emma takes over from here
+                continue;
+              }
+              // ... other postback handling
+            }
 
-          const messageText = event.message.text;
-          const messageId = event.message.mid;
+            // Skip echo messages (messages sent BY us)
+            if (event.message && event.message.is_echo) {
+              console.log('Skipping echo message');
+              continue;
+            }
 
-          console.log(`[COMMENT FLOW] From ${senderId}: "${messageText}"`);
+            // Skip if no text message
+            if (!event.message || !event.message.text) {
+              console.log('No text in message, skipping');
+              continue;
+            }
 
-          queueMessage(senderId, messageText, messageId);
+            const senderId = event.sender.id;
 
-        } catch (eventError) {
-          console.error('Error processing event:', eventError);
-          await sendEscalationAlert(
-            eventError,
+            // Check if this user came from comment flow
+            const userCheck = await db.query(
+              `SELECT came_from_comment FROM users WHERE user_id = $1`,
+              [senderId]
+            );
+
+            const fromComment = userCheck.rows.length > 0 && userCheck.rows[0].came_from_comment;
+
+            if (!fromComment) {
+              console.log(`[SKIP] DM from ${senderId} (not from comment flow)`);
+              continue;
+            }
+
+            const messageText = event.message.text;
+            const messageId = event.message.mid;
+
+            console.log(`[COMMENT FLOW] From ${senderId}: "${messageText}"`);
+
+            queueMessage(senderId, messageText, messageId);
+
+          } catch (eventError) {
+            console.error('Error processing event:', eventError);
+            await sendEscalationAlert(
+              eventError,
               `Webhook event error - User: ${event.sender?.id}, Message: "${event.message?.text?.substring(0, 50)}..."`
-          );
+            );
+          }
         }
       }
-    }
 
-      /////////////////
       if (changes) {
         for (const event of changes) {
         if (event.field === 'comments') {
@@ -132,7 +151,8 @@ app.post('/webhook/instagram', async (req, res) => {
           const commentText = comment.text;
 
           // Check if the comment is "Help" and on the specific carousel post
-          if (commentText.toLowerCase() === 'help') {
+          if (mediaId === 'YOUR_POST_ID' && commentText.toLowerCase() === 'help') {
+            console.log(`[MANYCHAT TRIGGER] "Help" comment on post ${mediaId}`);
           const existingUser = await db.query(
           `SELECT reel_id FROM users WHERE user_id = $1`,
           [senderId]
