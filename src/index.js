@@ -76,7 +76,7 @@ app.post('/webhook/instagram', async (req, res) => {
               const senderId = event.sender.id;
               const postbackTitle = event.postback.title;
 
-              if (postbackTitle === 'Sounds Good') {
+              if (postbackTitle === 'Sound good?') {
                 // User clicked the "Sounds Good?" button
                 const user = await User.findOrCreate(senderId);
                 await db.query(
