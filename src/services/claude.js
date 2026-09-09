@@ -53,8 +53,7 @@ STEP 1: User shows interest
 CHECK: Did they already mention their country?
 If YES → Skip to STEP 2
 If NO → SEND MESSAGE 1:
-"Hey, hope you are having a great day so far! I am Emma, Mingke's Right hand 😊
-I'd be happy to learn more about your situation and see if we may be able to support you with your job search.
+"I'd be happy to learn more about your situation and see if we may be able to support you with your job search 😊.
 
 To start, could you please let me know which country you're currently based in?"
 
