@@ -70,31 +70,6 @@ app.post('/webhook/instagram', async (req, res) => {
       if (messaging) {
         for (const event of messaging) {
           try {
-          // Handle postback (button clicks) — CHECK THIS FIRST, BEFORE MESSAGE CHECKS
-          if (event.postback) {
-            const senderId = event.sender.id;
-            const postbackTitle = event.postback.title;
-
-            console.log(`[POSTBACK] From ${senderId}: "${postbackTitle}"`);
-
-            let country = null;
-            if (postbackTitle.includes('UK') || postbackTitle.includes('US') || postbackTitle.includes('Canada') || postbackTitle.includes('CA')) {
-              country = 'UK/US/Canada';
-            } else if (postbackTitle.includes('Others') || postbackTitle.includes('🌍')) {
-              country = 'Others';
-            }
-
-            if (country) {
-              await db.query(
-              `UPDATE users SET country = $1, qualification_stage = 2, came_from_comment = true WHERE user_id = $2`,
-              [country, senderId]
-              );
-              console.log(`[POSTBACK] Stored country: ${country} for ${senderId}`);
-            }
-
-            continue;  // Done with postback, skip to next event
-          }
-
           // Skip echo messages (messages sent BY us)
           if (event.message && event.message.is_echo) {
             console.log('Skipping echo message');
