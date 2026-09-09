@@ -132,7 +132,7 @@ app.post('/webhook/instagram', async (req, res) => {
           const commentText = comment.text;
 
           // Check if the comment is "Help" and on the specific carousel post
-          if (commentText.toLowerCase() === 'help' && mediaId === 'YOUR_CAROUSEL_MEDIA_ID') {
+          if (commentText.toLowerCase() === 'help') {
           const existingUser = await db.query(
           `SELECT reel_id FROM users WHERE user_id = $1`,
           [senderId]
