@@ -139,9 +139,9 @@ app.post('/webhook/instagram', async (req, res) => {
         if (event.field === 'comments') {
           const comment = event.value;
       
-          // Only REELS
-          if (comment.media.media_product_type !== 'REELS') {
-            console.log(`Skipping non-REEL comment`);
+          // Only FEED posts (carousels)
+          if (comment.media.media_product_type !== 'FEED') {
+            console.log(`Skipping non-FEED comment`);
             continue;
           }
       
@@ -152,7 +152,7 @@ app.post('/webhook/instagram', async (req, res) => {
 
           // Check if the comment is "Help" and on the specific carousel post
           if (mediaId === '18019896590872740' && commentText.toLowerCase() === 'help') {
-            console.log(`[MANYCHAT TRIGGER] "Help" comment on post ${mediaId}`);
+            console.log(`[MANYCHAT TRIGGER] "Help" comment on carousel ${mediaId}`);
           const existingUser = await db.query(
           `SELECT reel_id FROM users WHERE user_id = $1`,
           [senderId]
@@ -183,7 +183,7 @@ app.post('/webhook/instagram', async (req, res) => {
     }
   }
 } else {
-  console.log(`[SKIP] Comment "${commentText}" on REEL ${mediaId} does not match the trigger criteria`);
+  console.log(`[SKIP] Comment "${commentText}" on carousel ${mediaId} does not match the trigger criteria`);
  }
           }
         }
