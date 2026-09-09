@@ -151,7 +151,7 @@ app.post('/webhook/instagram', async (req, res) => {
           const commentText = comment.text;
 
           // Check if the comment is "Help" and on the specific carousel post
-          if (mediaId === '18023886464699245' && commentText.toLowerCase() === 'help') {
+          if (mediaId === '17907765912536155' && commentText.toLowerCase() === 'help') {
             console.log(`[MANYCHAT TRIGGER] "Help" comment on carousel ${mediaId}`);
           const existingUser = await db.query(
           `SELECT reel_id FROM users WHERE user_id = $1`,
