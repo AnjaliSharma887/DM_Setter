@@ -68,41 +68,6 @@ async function processMessage(senderId, messageText, messageId) {
     const user = await User.findOrCreate(senderId);
     console.log(`User found/created: ${senderId}, stage: ${user.qualification_stage}`);
 
-    // ← ADD THIS CHECK
-    // If user came from comment flow and just answered the pain point question
-    const AMS_JEWELS_ID = '1406858894849070';  // ams_jewels's user_id
-    if (user.came_from_comment && user.qualification_stage === 2 && senderId === AMS_JEWELS_ID)  {
-      console.log(`[COMMENT FLOW] Capturing pain point for ${senderId} (casa_roza)`);
-
-      // Only auto-enable automation if explicitly allowed (safety for testing)
-      const shouldAutoEnable = process.env.AUTO_ENABLE_COMMENT_FLOW === 'true';
-      
-      // Store the pain point (user's answer)
-      await db.query(
-        `UPDATE users 
-         SET pain_points = $1, 
-             qualification_stage = 5,
-             automation_enabled = true
-         WHERE user_id = $2`,
-        [messageText, senderId]
-      );
-
-      console.log(`[COMMENT FLOW] Auto-enabled automation for casa_roza`);
-    } else if (user.came_from_comment && user.qualification_stage === 2) {
-      // For other comment-flow users (not casa_roza), just capture pain points, don't auto-enable
-      console.log(`[COMMENT FLOW] Capturing pain point for ${senderId} (other user)`);
-
-      await db.query(
-        `UPDATE users 
-         SET pain_points = $1, 
-             qualification_stage = 5
-         WHERE user_id = $2`,
-        [messageText, senderId]
-      );
-
-      console.log(`[COMMENT FLOW] Stored pain_points, automation disabled for testing`);
-    }
-
     if (!user.automation_enabled) {
       console.log(`[DISABLED] Automation off for ${senderId}, skipping processing`);
       return;  // Exit early, don't process
