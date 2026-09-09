@@ -142,7 +142,7 @@ app.post('/webhook/instagram', async (req, res) => {
             // New user from comment
             await db.query(
               `INSERT INTO users (user_id, instagram_handle, came_from_comment, reel_id, qualification_stage, automation_enabled)
-              VALUES ($1, $2, true, $3, 1, false)`,
+              VALUES ($1, $2, true, $3, 1, true)`,
               [senderId, instagram_handle, mediaId]
             );
             console.log(`[NEW COMMENT LEAD] User ${senderId} from REEL ${mediaId}`);
