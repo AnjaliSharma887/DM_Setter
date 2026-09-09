@@ -151,7 +151,7 @@ app.post('/webhook/instagram', async (req, res) => {
           const commentText = comment.text;
 
           // Check if the comment is "Help" and on the specific carousel post
-          if (mediaId === '18019896590872740' && commentText.toLowerCase() === 'help') {
+          if (mediaId === '18023886464699245' && commentText.toLowerCase() === 'help') {
             console.log(`[MANYCHAT TRIGGER] "Help" comment on carousel ${mediaId}`);
           const existingUser = await db.query(
           `SELECT reel_id FROM users WHERE user_id = $1`,
@@ -183,7 +183,7 @@ app.post('/webhook/instagram', async (req, res) => {
     }
   }
 } else {
-  console.log(`[SKIP] Comment "${commentText}" on carousel ${mediaId} does not match the trigger criteria`);
+  console.log(`[SKIP] Comment "${commentText}" on REEL ${mediaId} does not match the trigger criteria`);
  }
           }
         }
