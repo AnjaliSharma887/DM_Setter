@@ -17,6 +17,7 @@ async function findEligibleUsers() {
       SELECT * FROM users
       WHERE last_message_at IS NOT NULL
         AND qualification_stage < 8
+        AND qualified = true 
         AND automation_enabled = true
         AND (
           (follow_up_count = 0 AND (NOW() - last_message_at) BETWEEN interval '8 hours' AND interval '24 hours')
@@ -73,6 +74,15 @@ async function generateFollowUpMessage(user) {
 async function sendFollowUp(user) {
   try {
     console.log(`[FOLLOWUP] Processing ${user.user_id}, stage: ${user.qualification_stage}`);
+
+    // ── CHECK IF USER EXISTS ──
+    const userExists = await db.query('SELECT * FROM users WHERE user_id = $1', [user.user_id]);
+
+    if (userExists.rows.length === 0) {
+      console.log(`[FOLLOWUP] User ${user.user_id} no longer exists, skipping...`);
+      return false;  // Skip this user and move on
+    }
+    // ── END CHECK ──
     
     // Get last 3 messages ONCE
     const history = await Conversation.getHistory(user.user_id, 6);
