@@ -16,7 +16,7 @@ async function findEligibleUsers() {
     const result = await db.query(`
       SELECT * FROM users
       WHERE last_message_at IS NOT NULL
-        AND qualification_stage < 8
+        AND qualification_stage < 7
         AND qualified = true 
         AND automation_enabled = true
         AND (
