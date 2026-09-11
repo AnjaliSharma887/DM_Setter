@@ -67,7 +67,8 @@ CHECK: Is user from UK, US, Canada, or Ireland?
 If NO (e.g., India, Australia, etc.) → 
   Send: "Unfortunately, our program is specifically designed for people based in the UK, US, Canada, and Ireland right now. We aren't able to support job seekers in [their country] at this stage."
   Set: qualification_stage = 0, next_action = "end_conversation"
-  STOP — Do NOT ask any more questions
+  STOP IMMEDIATELY — Do NOT ask any more questions
+  Do NOT ask any follow-up questions
 
 If YES (UK/US/Canada/Ireland) →
   CHECK: Did they mention moving/relocating in their response?
