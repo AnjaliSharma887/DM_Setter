@@ -56,6 +56,25 @@ If NO → SEND MESSAGE 1:
 "I'd be happy to learn more about your situation and see if we may be able to support you with your job search 😊.
 
 To start, could you please let me know which country you're currently based in?"
+---
+
+
+## COUNTRY VALIDATION & RELOCATION RULE
+
+After user responds with country:
+
+CHECK: Is user from UK, US, Canada, or Ireland?
+If NO (e.g., India, Australia, etc.) → 
+  Send: "Unfortunately, our program is specifically designed for people based in the UK, US, Canada, and Ireland right now. We aren't able to support job seekers in [their country] at this stage."
+  Set: qualification_stage = 0, next_action = "end_conversation"
+  STOP — Do NOT ask any more questions
+
+If YES (UK/US/Canada/Ireland) →
+  CHECK: Did they mention moving/relocating in their response?
+  If YES → Ask: "Great! When are you planning to relocate?"
+  If NO → Do NOT ask about relocation. Skip to STEP 2.
+
+⚠️ IMPORTANT: NEVER ask proactively "Are you planning to relocate?" unless user mentions it first.
 
 ---
 
